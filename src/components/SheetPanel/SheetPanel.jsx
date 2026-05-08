@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { exportToXlsx, importFromXlsx } from '@utils/sheetIO';
-import { useLang } from '../i18n/LangContext.jsx';
+import { useLang } from '../../i18n/LangContext.jsx';
+import './SheetPanel.css';
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);

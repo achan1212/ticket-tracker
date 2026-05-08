@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { exportToCSV, calcTotal, formatCurrency } from '@utils/helpers';
-import { useLang } from '../i18n/LangContext.jsx';
-import CostAnalysis from '@components/CostAnalysis';
+import { useLang } from '../../i18n/LangContext.jsx';
+import CostAnalysis from '@components/CostAnalysis/CostAnalysis';
+import './ResultsTable.css';
 
 const emptyForm = { name: '', cost: '', quantity: '1' };
 

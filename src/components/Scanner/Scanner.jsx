@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { useLang } from '../i18n/LangContext.jsx';
+import { useLang } from '../../i18n/LangContext.jsx';
+import './Scanner.css';
 
 export default function Scanner({ onScan, loading, progress, error, preview, onManualEntry }) {
   const inputRef = useRef(null);

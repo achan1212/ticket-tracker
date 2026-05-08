@@ -1,0 +1,180 @@
+/* Google Sheets Panel */
+.sheet-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sheet-panel-inner {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.sheet-section {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.sheet-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0;
+}
+
+.sheet-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.export-icon {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid rgba(232,255,71,0.25);
+}
+
+.import-icon {
+  background: rgba(99,179,237,0.12);
+  color: #63b3ed;
+  border: 1px solid rgba(99,179,237,0.25);
+}
+
+.sheet-text {
+  flex: 1;
+  min-width: 180px;
+}
+
+.sheet-label {
+  font-size: 0.88rem;
+  color: var(--text);
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.sheet-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Feedback */
+.sheet-feedback {
+  padding: 0.85rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.sheet-feedback.success {
+  background: rgba(74,222,128,0.1);
+  border: 1px solid rgba(74,222,128,0.3);
+  color: #4ade80;
+}
+
+.sheet-feedback.error {
+  background: rgba(255,79,79,0.1);
+  border: 1px solid rgba(255,79,79,0.3);
+  color: #ff4f4f;
+}
+
+/* How-To */
+.sheet-howto {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+}
+
+.sheet-howto-title {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.85rem;
+}
+
+.sheet-howto ol {
+  list-style: none;
+  counter-reset: steps;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.sheet-howto li {
+  counter-increment: steps;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding-left: 1.75rem;
+  position: relative;
+  line-height: 1.5;
+}
+
+.sheet-howto li::before {
+  content: counter(steps);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  font-size: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.sheet-howto strong { color: var(--text); }
+
+/* Date Input / Sheet Panel */
+.sheet-date-row {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  flex-wrap: wrap;
+}
+
+.sheet-date-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(167,139,250,0.12);
+  color: #a78bfa;
+  border: 1px solid rgba(167,139,250,0.25);
+}
+
+.date-input {
+  min-width: 160px;
+  flex: 0 1 160px;
+  color-scheme: dark;
+}
+
+/* Mobile: Sheets */
+@media (max-width: 640px) {
+  .sheet-section { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .sheet-section .btn { width: 100%; text-align: center; }
+  .sheet-date-row { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .date-input { width: 100%; flex: none; }
+}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useLang } from '../i18n/LangContext.jsx';
+import { useLang } from '../../i18n/LangContext.jsx';
 import { formatCurrency } from '@utils/helpers';
+import './CostAnalysis.css';
 
 // Fast casual industry average benchmarks (NRA / Toast / Deloitte data)
 const FAST_CASUAL_BENCHMARKS = {

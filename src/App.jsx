@@ -1,16 +1,16 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const ScannerTab = lazy(() => import('@components/ScannerTab'));
+const ScannerTab = lazy(() => import('@components/ScannerTab/ScannerTab'));
 import { useOrderStore } from '@hooks/useOrderStore';
 import { useMonthlyStore } from '@hooks/useMonthlyStore';
 import { useLang } from './i18n/LangContext.jsx';
-import DailySummaryTable from '@components/DailySummaryTable.jsx';
-import MonthlySummaryTable from '@components/MonthlySummaryTable.jsx';
-import Dashboard from '@components/Dashboard.jsx';
-import CostAnalysis from '@components/CostAnalysis';
-import DeliveryAnalysis from '@components/DeliveryAnalysis';
-import SheetPanel from '@components/SheetPanel';
+import DailySummaryTable from '@components/DailySummaryTable/DailySummaryTable.jsx';
+import MonthlySummaryTable from '@components/MonthlySummaryTable/MonthlySummaryTable.jsx';
+import Dashboard from '@components/Dashboard/Dashboard.jsx';
+import CostAnalysis from '@components/CostAnalysis/CostAnalysis';
+import DeliveryAnalysis from '@components/DeliveryAnalysis/DeliveryAnalysis';
+import SheetPanel from '@components/SheetPanel/SheetPanel';
 import '@styles/index.css';
 
 const TAB_KEYS = ['summary', 'monthly', 'dashboard', 'delivery', 'analysis', 'sheets', 'scanner'];

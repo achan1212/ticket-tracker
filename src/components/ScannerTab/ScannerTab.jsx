@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useOrderScan } from '@hooks/useOrderScan';
-import Scanner from '@components/Scanner';
-import ResultsTable from '@components/ResultsTable';
+import Scanner from '@components/Scanner/Scanner';
+import ResultsTable from '@components/ResultsTable/ResultsTable';
+import './ScannerTab.css';
 
 export default function ScannerTab() {
   const { scan, results, loading, progress, error, rawText, reset } = useOrderScan();

@@ -10,6 +10,7 @@ import { useState, useCallback } from 'react';
 //   // 3rd party platform sales (tracked separately)
 //   doordash: 0, ubereats: 0, grubhub: 0,
 //   doordashOrders: 0, ubereatsOrders: 0, grubhubOrders: 0,
+//   categories: {}, // Revenue breakdown by food category: { 'Pizza': 1200, 'Pasta': 800, etc. }
 //   notes: ''
 // }
 
@@ -31,6 +32,7 @@ export function useOrderStore() {
         pickupOrders: 0,
         doordash: 0, ubereats: 0, grubhub: 0,
         doordashOrders: 0, ubereatsOrders: 0, grubhubOrders: 0,
+        categories: {},
         notes: '',
         ...(prev[date] || {}),
         ...updates,

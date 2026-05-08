@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { formatCurrency } from '@utils/helpers';
-import { useLang } from '../i18n/LangContext.jsx';
+import { useLang } from '../../i18n/LangContext.jsx';
+import './DeliveryAnalysis.css';
 
 const PLATFORMS = {
   doordash: { name: 'DoorDash', color: '#FF3008', icon: '🔴', commissionPct: 25, paymentProcessingPct: 2.5, flatFeePerOrder: 0, marketingPct: 0 },

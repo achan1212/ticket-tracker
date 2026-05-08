@@ -1,0 +1,280 @@
+/* Delivery Analysis */
+.delivery-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.da-intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  flex-wrap: wrap;
+}
+
+.da-order-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 120px;
+}
+
+/* Platform Cards */
+.platform-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.platform-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  border-top: 3px solid var(--platform-color, var(--border));
+}
+
+.platform-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.5rem;
+  cursor: pointer;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.platform-card-header:hover { background: rgba(255,255,255,0.02); }
+
+.platform-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.platform-icon { font-size: 1.2rem; margin-top: 2px; }
+
+.platform-name {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+
+.platform-note {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  max-width: 380px;
+}
+
+.platform-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.platform-summary-pills {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* Pills */
+.pill {
+  font-size: 0.65rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 100px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pill-cost    { background: rgba(255,79,79,0.15);   color: #ff4f4f; border: 1px solid rgba(255,79,79,0.3); }
+.pill-net     { background: rgba(74,222,128,0.15);  color: #4ade80; border: 1px solid rgba(74,222,128,0.3); }
+.pill-rate    { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+.pill-warn    { background: rgba(250,204,21,0.15);  color: #facc15; border: 1px solid rgba(250,204,21,0.3); }
+
+/* Platform Body */
+.platform-body {
+  padding: 0 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  animation: fadeUp 0.2s ease both;
+}
+
+.platform-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+
+/* Breakdown Table */
+.platform-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.breakdown-table thead tr {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+}
+
+.breakdown-table th {
+  padding: 0.6rem 1rem;
+  text-align: left;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.breakdown-table tbody tr {
+  border-bottom: 1px solid var(--border);
+}
+.breakdown-table tbody tr:last-child { border-bottom: none; }
+
+.breakdown-table td {
+  padding: 0.65rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.breakdown-table td:last-child { text-align: right; font-family: var(--font-mono); }
+.breakdown-table th:last-child { text-align: right; }
+
+.bd-positive { color: var(--text) !important; font-weight: 500; }
+.bd-negative { color: #ff4f4f !important; }
+
+.bd-total-row td {
+  color: var(--text) !important;
+  font-weight: 600;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.bd-net-row td {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding-top: 0.5rem;
+}
+
+/* Platform Bar */
+.platform-bar-wrap { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.platform-bar-track {
+  height: 10px;
+  border-radius: 6px;
+  background: var(--border);
+  display: flex;
+  overflow: hidden;
+}
+
+.platform-bar-fill, .platform-bar-net {
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+.platform-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.btn-reset-platform {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: all 0.15s;
+}
+.btn-reset-platform:hover { color: var(--text); border-color: #444; }
+
+/* Comparison Table */
+.comparison-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.comparison-title {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.comparison-table th {
+  padding: 0.7rem 1.25rem;
+  text-align: left;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 400;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+}
+
+.comparison-table td {
+  padding: 0.85rem 1.25rem;
+  font-size: 0.82rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.comparison-table tr:last-child td { border-bottom: none; }
+
+.comparison-note {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border);
+  opacity: 0.7;
+}
+
+/* DA Section Toggle */
+.da-section-toggle {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.25rem;
+}
+
+/* Mobile: Delivery */
+@media (max-width: 640px) {
+  .da-intro { flex-direction: column; gap: 1rem; }
+  .platform-card-header { flex-direction: column; align-items: flex-start; }
+  .platform-header-meta { width: 100%; justify-content: space-between; }
+  .platform-fields { grid-template-columns: 1fr 1fr; }
+  .platform-body { padding: 0 1rem 1rem; }
+  .breakdown-table th, .breakdown-table td { padding: 0.5rem 0.75rem; font-size: 0.72rem; }
+  .comparison-table th, .comparison-table td { padding: 0.65rem 0.85rem; font-size: 0.75rem; }
+  .platform-summary-pills { gap: 0.3rem; }
+}

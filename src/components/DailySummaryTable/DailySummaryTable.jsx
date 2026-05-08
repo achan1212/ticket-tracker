@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatCurrency } from '@utils/helpers';
+import './DailySummaryTable.css';
 
 function formatDate(iso) {
   const [year, month, day] = iso.split('-');
@@ -14,6 +15,7 @@ function todayISO() {
 const EMPTY_DAY = {
   deliveryRevenue: '', pickupRevenue: '',
   deliveryOrders: '', pickupOrders: '',
+  categories: {},
   notes: '',
 };
 
@@ -23,13 +25,38 @@ function DayForm({ initial, onSave, onCancel }) {
     pickupRevenue:   initial?.pickupRevenue   || '',
     deliveryOrders:  initial?.deliveryOrders  || '',
     pickupOrders:    initial?.pickupOrders    || '',
+    categories:      initial?.categories      || {},
     notes:           initial?.notes           || '',
   });
+  const [categoryInput, setCategoryInput] = useState({ name: '', cost: '' });
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  const addCategory = () => {
+    if (!categoryInput.name.trim() || !categoryInput.cost) return;
+    const cost = parseFloat(categoryInput.cost);
+    if (isNaN(cost) || cost < 0) return;
+
+    setForm(f => ({
+      ...f,
+      categories: { ...f.categories, [categoryInput.name.trim()]: cost }
+    }));
+    setCategoryInput({ name: '', cost: '' });
+  };
+
+  const removeCategory = (name) => {
+    setForm(f => {
+      const newCategories = { ...f.categories };
+      delete newCategories[name];
+      return { ...f, categories: newCategories };
+    });
+  };
+
   const totalRevenue = (parseFloat(form.deliveryRevenue) || 0) + (parseFloat(form.pickupRevenue) || 0);
   const totalOrders  = (parseInt(form.deliveryOrders)    || 0) + (parseInt(form.pickupOrders)    || 0);
+  const categoryTotal = Object.values(form.categories).reduce((sum, val) => sum + val, 0);
+  const hasCategories = Object.keys(form.categories).length > 0;
+  const categoryMatch = hasCategories ? Math.abs(categoryTotal - totalRevenue) < 0.01 : true;
 
   const handleSave = () => {
     onSave({
@@ -37,6 +64,7 @@ function DayForm({ initial, onSave, onCancel }) {
       pickupRevenue:   parseFloat(form.pickupRevenue)   || 0,
       deliveryOrders:  parseInt(form.deliveryOrders)    || 0,
       pickupOrders:    parseInt(form.pickupOrders)      || 0,
+      categories:      form.categories,
       notes:           form.notes.trim(),
     });
   };
@@ -93,10 +121,62 @@ function DayForm({ initial, onSave, onCancel }) {
           value={form.notes} onChange={e => set('notes', e.target.value)} />
       </div>
 
+      {/* CATEGORIES SECTION */}
+      <div className="day-form-section" style={{ marginTop: '0.75rem' }}>
+        <label className="day-form-section-label">🍕 Revenue Categories</label>
+        <p className="category-help-text">Break down your revenue by food type (optional)</p>
+
+        {/* Existing Categories */}
+        {Object.keys(form.categories).length > 0 && (
+          <div className="category-list">
+            {Object.entries(form.categories).map(([name, cost]) => (
+              <div key={name} className="category-item">
+                <span className="category-name">{name}</span>
+                <span className="category-cost">{formatCurrency(cost)}</span>
+                <button type="button" className="btn-remove-category" onClick={() => removeCategory(name)}>×</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add New Category */}
+        <div className="category-input-row">
+          <input
+            className="form-input"
+            placeholder="Category name (e.g. Pizza, Pasta, Drinks)"
+            value={categoryInput.name}
+            onChange={e => setCategoryInput(prev => ({ ...prev, name: e.target.value }))}
+            onKeyPress={e => e.key === 'Enter' && addCategory()}
+          />
+          <div className="target-input-wrap" style={{ minWidth: '120px' }}>
+            <span className="target-prefix">$</span>
+            <input
+              className="form-input form-input-sm"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              value={categoryInput.cost}
+              onChange={e => setCategoryInput(prev => ({ ...prev, cost: e.target.value }))}
+              onKeyPress={e => e.key === 'Enter' && addCategory()}
+            />
+          </div>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={addCategory}>Add</button>
+        </div>
+
+        {/* Category validation warning */}
+        {hasCategories && !categoryMatch && (
+          <div className="category-warning">
+            ⚠️ Categories total {formatCurrency(categoryTotal)} but revenue is {formatCurrency(totalRevenue)}
+          </div>
+        )}
+      </div>
+
       <div className="day-form-totals">
         <span className="dft-item">Total Revenue: <strong>{formatCurrency(totalRevenue)}</strong></span>
         <span className="dft-item">Total Orders: <strong>{totalOrders}</strong></span>
         {totalOrders > 0 && <span className="dft-item">Avg: <strong>{formatCurrency(totalRevenue / totalOrders)}</strong></span>}
+        {hasCategories && <span className="dft-item">Category Total: <strong style={{ color: categoryMatch ? 'inherit' : 'var(--danger)' }}>{formatCurrency(categoryTotal)}</strong></span>}
       </div>
 
       <div className="day-form-actions">
@@ -195,6 +275,9 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
                 {day.deliveryRevenue > 0 && <span className="type-pill delivery">🛵 {formatCurrency(day.deliveryRevenue)}</span>}
                 {day.pickupRevenue   > 0 && <span className="type-pill pickup">🏪 {formatCurrency(day.pickupRevenue)}</span>}
                 {day.notes && <span className="type-pill notes-pill">📝 {day.notes}</span>}
+                {days[day.date]?.categories && Object.keys(days[day.date].categories).length > 0 && (
+                  <span className="type-pill category-pill">💰 {Object.keys(days[day.date].categories).length} categories</span>
+                )}
               </div>
             </div>
             <div className="day-stats">

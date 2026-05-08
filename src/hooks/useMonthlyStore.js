@@ -14,6 +14,7 @@ export function useMonthlyStore() {
         pickupOrders: 0,
         doordash: 0, ubereats: 0, grubhub: 0,
         doordashOrders: 0, ubereatsOrders: 0, grubhubOrders: 0,
+        categories: {},
         notes: '',
         ...(prev[month] || {}),
         ...updates,

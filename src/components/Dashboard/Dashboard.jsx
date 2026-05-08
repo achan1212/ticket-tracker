@@ -4,6 +4,7 @@ import {
   Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell
 } from 'recharts';
 import { formatCurrency } from '@utils/helpers';
+import './Dashboard.css';
 
 const ACCENT = '#e8ff47';
 const DELIVERY_COLOR = '#06C167';
