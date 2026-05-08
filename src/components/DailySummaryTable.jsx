@@ -1,0 +1,233 @@
+import { useState } from 'react';
+import { formatCurrency } from '@utils/helpers';
+
+function formatDate(iso) {
+  const [year, month, day] = iso.split('-');
+  return new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+    .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+const EMPTY_DAY = {
+  deliveryRevenue: '', pickupRevenue: '',
+  deliveryOrders: '', pickupOrders: '',
+  notes: '',
+};
+
+function DayForm({ initial, onSave, onCancel }) {
+  const [form, setForm] = useState({
+    deliveryRevenue: initial?.deliveryRevenue || '',
+    pickupRevenue:   initial?.pickupRevenue   || '',
+    deliveryOrders:  initial?.deliveryOrders  || '',
+    pickupOrders:    initial?.pickupOrders    || '',
+    notes:           initial?.notes           || '',
+  });
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const totalRevenue = (parseFloat(form.deliveryRevenue) || 0) + (parseFloat(form.pickupRevenue) || 0);
+  const totalOrders  = (parseInt(form.deliveryOrders)    || 0) + (parseInt(form.pickupOrders)    || 0);
+
+  const handleSave = () => {
+    onSave({
+      deliveryRevenue: parseFloat(form.deliveryRevenue) || 0,
+      pickupRevenue:   parseFloat(form.pickupRevenue)   || 0,
+      deliveryOrders:  parseInt(form.deliveryOrders)    || 0,
+      pickupOrders:    parseInt(form.pickupOrders)      || 0,
+      notes:           form.notes.trim(),
+    });
+  };
+
+  return (
+    <div className="day-form">
+      <div className="day-form-grid">
+        <div className="day-form-section">
+          <p className="day-form-section-label">🛵 Delivery</p>
+          <div className="day-form-row">
+            <div className="day-form-field">
+              <label className="target-label">Revenue</label>
+              <div className="target-input-wrap">
+                <span className="target-prefix">$</span>
+                <input className="form-input form-input-sm" type="number" min="0" step="0.01"
+                  placeholder="0.00" value={form.deliveryRevenue}
+                  onChange={e => set('deliveryRevenue', e.target.value)} />
+              </div>
+            </div>
+            <div className="day-form-field">
+              <label className="target-label">Orders</label>
+              <input className="form-input form-input-sm" type="number" min="0" step="1"
+                placeholder="0" value={form.deliveryOrders}
+                onChange={e => set('deliveryOrders', e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        <div className="day-form-section">
+          <p className="day-form-section-label">🏪 Pickup</p>
+          <div className="day-form-row">
+            <div className="day-form-field">
+              <label className="target-label">Revenue</label>
+              <div className="target-input-wrap">
+                <span className="target-prefix">$</span>
+                <input className="form-input form-input-sm" type="number" min="0" step="0.01"
+                  placeholder="0.00" value={form.pickupRevenue}
+                  onChange={e => set('pickupRevenue', e.target.value)} />
+              </div>
+            </div>
+            <div className="day-form-field">
+              <label className="target-label">Orders</label>
+              <input className="form-input form-input-sm" type="number" min="0" step="1"
+                placeholder="0" value={form.pickupOrders}
+                onChange={e => set('pickupOrders', e.target.value)} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="day-form-field" style={{ marginTop: '0.75rem' }}>
+        <label className="target-label">Notes (optional)</label>
+        <input className="form-input" placeholder="e.g. lunch rush, holiday weekend..."
+          value={form.notes} onChange={e => set('notes', e.target.value)} />
+      </div>
+
+      <div className="day-form-totals">
+        <span className="dft-item">Total Revenue: <strong>{formatCurrency(totalRevenue)}</strong></span>
+        <span className="dft-item">Total Orders: <strong>{totalOrders}</strong></span>
+        {totalOrders > 0 && <span className="dft-item">Avg: <strong>{formatCurrency(totalRevenue / totalOrders)}</strong></span>}
+      </div>
+
+      <div className="day-form-actions">
+        <button className="btn btn-ghost btn-sm" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-primary btn-sm" onClick={handleSave}>Save Day</button>
+      </div>
+    </div>
+  );
+}
+
+export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onRemoveDay }) {
+  const [editingDate, setEditingDate] = useState(null);
+  const [addingDate, setAddingDate] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [filterType, setFilterType] = useState('all');
+
+  const handleAddSave = (data) => {
+    if (!addingDate) return;
+    onUpsertDay(addingDate, data);
+    setShowAddForm(false);
+    setAddingDate('');
+  };
+
+  const handleEditSave = (date, data) => {
+    onUpsertDay(date, data);
+    setEditingDate(null);
+  };
+
+  // Filter for display
+  const filtered = dailySummary.filter(d => {
+    if (filterType === 'delivery') return (d.deliveryOrders || 0) > 0;
+    if (filterType === 'pickup')   return (d.pickupOrders   || 0) > 0;
+    return true;
+  });
+
+  return (
+    <div className="daily-summary">
+
+      {/* CONTROLS */}
+      <div className="ds-controls">
+        <div className="ds-filter-pills">
+          {[
+            { key: 'all',      label: 'All Days' },
+            { key: 'delivery', label: '🛵 Delivery' },
+            { key: 'pickup',   label: '🏪 Pickup' },
+          ].map(f => (
+            <button key={f.key} className={`filter-pill ${filterType === f.key ? 'active' : ''}`}
+              onClick={() => setFilterType(f.key)}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <button className="btn btn-primary btn-sm" onClick={() => { setAddingDate(todayISO()); setShowAddForm(true); }}>
+          + Add Day
+        </button>
+      </div>
+
+      {/* ADD NEW DAY FORM */}
+      {showAddForm && (
+        <div className="day-card">
+          <div className="day-card-header" style={{ cursor: 'default' }}>
+            <div className="day-date-col">
+              <span className="day-date">New Entry</span>
+            </div>
+            <input type="date" className="form-input date-input"
+              value={addingDate} max={todayISO()}
+              onChange={e => setAddingDate(e.target.value)} />
+          </div>
+          <DayForm
+            initial={EMPTY_DAY}
+            onSave={handleAddSave}
+            onCancel={() => { setShowAddForm(false); setAddingDate(''); }}
+          />
+        </div>
+      )}
+
+      {/* EMPTY STATE */}
+      {!showAddForm && filtered.length === 0 && (
+        <div className="ds-empty">
+          <p>No daily records yet. Click <strong>Add Day</strong> to enter today's sales.</p>
+          <button className="btn btn-primary" onClick={() => { setAddingDate(todayISO()); setShowAddForm(true); }}>
+            + Add Today
+          </button>
+        </div>
+      )}
+
+      {/* DAILY ROWS */}
+      {filtered.map(day => (
+        <div key={day.date} className="day-card">
+          <div className="day-card-header"
+            onClick={() => editingDate !== day.date && setEditingDate(editingDate === day.date ? null : day.date)}>
+            <div className="day-date-col">
+              <span className="day-date">{formatDate(day.date)}</span>
+              <div className="day-type-pills">
+                {day.deliveryRevenue > 0 && <span className="type-pill delivery">🛵 {formatCurrency(day.deliveryRevenue)}</span>}
+                {day.pickupRevenue   > 0 && <span className="type-pill pickup">🏪 {formatCurrency(day.pickupRevenue)}</span>}
+                {day.notes && <span className="type-pill notes-pill">📝 {day.notes}</span>}
+              </div>
+            </div>
+            <div className="day-stats">
+              <div className="day-stat">
+                <span className="day-stat-label">Revenue</span>
+                <span className="day-stat-value">{formatCurrency(day.revenue)}</span>
+              </div>
+              <div className="day-stat">
+                <span className="day-stat-label">Orders</span>
+                <span className="day-stat-value">{day.orderCount}</span>
+              </div>
+              <div className="day-stat">
+                <span className="day-stat-label">Avg</span>
+                <span className="day-stat-value">{day.orderCount > 0 ? formatCurrency(day.avgOrderValue) : '—'}</span>
+              </div>
+            </div>
+            <div className="day-actions">
+              <button className="btn btn-ghost btn-sm"
+                onClick={e => { e.stopPropagation(); setEditingDate(day.date); }}>Edit</button>
+              <button className="btn-remove" title="Delete day"
+                onClick={e => { e.stopPropagation(); onRemoveDay(day.date); }}>×</button>
+            </div>
+          </div>
+
+          {editingDate === day.date && (
+            <DayForm
+              initial={days[day.date]}
+              onSave={(data) => handleEditSave(day.date, data)}
+              onCancel={() => setEditingDate(null)}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
