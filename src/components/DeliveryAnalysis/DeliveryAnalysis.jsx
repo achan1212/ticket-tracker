@@ -9,14 +9,13 @@ const PLATFORMS = {
   grubhub:   { name: 'Grubhub', color: '#F63440', icon: '🟠', commissionPct: 20, paymentProcessingPct: 3.05, flatFeePerOrder: 0.30, marketingPct: 0 },
 };
 
-function PlatformSalesRow({ platformKey, platform, days, onUpsertDay }) {
-  const [rates, setRates] = useState({ ...platform });
+function PlatformSalesRow({ platformKey, platform, days }) {
+  const { t } = useLang();
+  const [rates, setRates]       = useState({ ...platform });
   const [showRates, setShowRates] = useState(false);
 
-  // Aggregate platform revenue + orders across all days
-  const totalRevenue = Object.values(days).reduce((s, d) => s + (d[platformKey] || 0), 0);
-  const totalOrders  = Object.values(days).reduce((s, d) => s + (d[`${platformKey}Orders`] || 0), 0);
-
+  const totalRevenue    = Object.values(days).reduce((s, d) => s + (d[platformKey] || 0), 0);
+  const totalOrders     = Object.values(days).reduce((s, d) => s + (d[`${platformKey}Orders`] || 0), 0);
   const commissionAmt   = totalRevenue * (rates.commissionPct / 100);
   const processingAmt   = totalRevenue * (rates.paymentProcessingPct / 100);
   const flatAmt         = rates.flatFeePerOrder * totalOrders;
@@ -25,6 +24,13 @@ function PlatformSalesRow({ platformKey, platform, days, onUpsertDay }) {
   const netRevenue      = totalRevenue - totalDeductions;
   const effectiveRate   = totalRevenue > 0 ? (totalDeductions / totalRevenue) * 100 : 0;
 
+  const fields = [
+    { key: 'commissionPct',        label: t.commissionLabel,  suffix: '%', help: t.commissionHelp },
+    { key: 'paymentProcessingPct', label: t.processingLabel,  suffix: '%', help: t.processingHelp },
+    { key: 'flatFeePerOrder',      label: t.flatFeeLabel,     prefix: '$', help: t.flatFeeHelp },
+    { key: 'marketingPct',         label: t.marketingLabel,   suffix: '%', help: t.marketingHelp },
+  ];
+
   return (
     <div className="platform-card" style={{ '--platform-color': platform.color }}>
       <div className="platform-card-header" onClick={() => setShowRates(!showRates)}>
@@ -32,15 +38,15 @@ function PlatformSalesRow({ platformKey, platform, days, onUpsertDay }) {
           <span className="platform-icon">{platform.icon}</span>
           <div>
             <h4 className="platform-name" style={{ color: platform.color }}>{platform.name}</h4>
-            <p className="platform-note">{totalOrders} orders · {formatCurrency(totalRevenue)} gross</p>
+            <p className="platform-note">{totalOrders} {t.dashOrdersUnit} · {formatCurrency(totalRevenue)} {t.daGrossLabel}</p>
           </div>
         </div>
         <div className="platform-header-meta">
           {totalRevenue > 0 && (
             <div className="platform-summary-pills">
               <span className="pill pill-cost">−{formatCurrency(totalDeductions)}</span>
-              <span className="pill pill-net">Net {formatCurrency(netRevenue)}</span>
-              <span className="pill pill-rate">{effectiveRate.toFixed(1)}% take</span>
+              <span className="pill pill-net">{t.daNetLabel} {formatCurrency(netRevenue)}</span>
+              <span className="pill pill-rate">{effectiveRate.toFixed(1)}{t.daTakeLabel}</span>
             </div>
           )}
           <span className="item-cost-chevron">{showRates ? '▲' : '▼'}</span>
@@ -49,14 +55,8 @@ function PlatformSalesRow({ platformKey, platform, days, onUpsertDay }) {
 
       {showRates && (
         <div className="platform-body">
-          {/* RATE INPUTS */}
           <div className="platform-fields">
-            {[
-              { key: 'commissionPct',        label: 'Commission %',        suffix: '%', help: 'Platform commission on order subtotal' },
-              { key: 'paymentProcessingPct', label: 'Payment Processing %', suffix: '%', help: 'Credit card processing fee' },
-              { key: 'flatFeePerOrder',      label: 'Flat Fee / Order',     prefix: '$', help: 'Fixed fee per order' },
-              { key: 'marketingPct',         label: 'Marketing / Ads %',   suffix: '%', help: 'Sponsored listings or promos' },
-            ].map(({ key, label, suffix, prefix, help }) => (
+            {fields.map(({ key, label, suffix, prefix, help }) => (
               <div className="platform-field" key={key}>
                 <label className="target-label">{label}</label>
                 <p className="target-help">{help}</p>
@@ -72,21 +72,22 @@ function PlatformSalesRow({ platformKey, platform, days, onUpsertDay }) {
             ))}
           </div>
 
-          {/* FEE BREAKDOWN */}
           {totalRevenue > 0 && (
             <div className="platform-breakdown">
               <table className="breakdown-table">
-                <thead><tr><th>Fee Type</th><th>Rate</th><th>Amount</th></tr></thead>
+                <thead>
+                  <tr><th>{t.colFeeType}</th><th>{t.colRate}</th><th>{t.colAmount}</th></tr>
+                </thead>
                 <tbody>
-                  <tr><td>Gross Revenue</td><td>—</td><td className="bd-positive">{formatCurrency(totalRevenue)}</td></tr>
-                  <tr><td>Commission</td><td>{rates.commissionPct}%</td><td className="bd-negative">−{formatCurrency(commissionAmt)}</td></tr>
-                  <tr><td>Payment Processing</td><td>{rates.paymentProcessingPct}%</td><td className="bd-negative">−{formatCurrency(processingAmt)}</td></tr>
-                  <tr><td>Flat Fees ({totalOrders} × ${rates.flatFeePerOrder.toFixed(2)})</td><td>—</td><td className="bd-negative">−{formatCurrency(flatAmt)}</td></tr>
-                  <tr><td>Marketing</td><td>{rates.marketingPct}%</td><td className="bd-negative">−{formatCurrency(marketingAmt)}</td></tr>
+                  <tr><td>{t.grossRevenue}</td><td>—</td><td className="bd-positive">{formatCurrency(totalRevenue)}</td></tr>
+                  <tr><td>{t.commission}</td><td>{rates.commissionPct}%</td><td className="bd-negative">−{formatCurrency(commissionAmt)}</td></tr>
+                  <tr><td>{t.paymentProcessing}</td><td>{rates.paymentProcessingPct}%</td><td className="bd-negative">−{formatCurrency(processingAmt)}</td></tr>
+                  <tr><td>{t.flatFees} ({totalOrders} × ${rates.flatFeePerOrder.toFixed(2)})</td><td>—</td><td className="bd-negative">−{formatCurrency(flatAmt)}</td></tr>
+                  <tr><td>{t.marketing}</td><td>{rates.marketingPct}%</td><td className="bd-negative">−{formatCurrency(marketingAmt)}</td></tr>
                 </tbody>
                 <tfoot>
-                  <tr className="bd-total-row"><td>Total Deductions</td><td>{effectiveRate.toFixed(1)}%</td><td className="bd-negative">−{formatCurrency(totalDeductions)}</td></tr>
-                  <tr className="bd-net-row" style={{ color: platform.color }}><td colSpan="2">Net Revenue to You</td><td>{formatCurrency(netRevenue)}</td></tr>
+                  <tr className="bd-total-row"><td>{t.totalDeductions}</td><td>{effectiveRate.toFixed(1)}%</td><td className="bd-negative">−{formatCurrency(totalDeductions)}</td></tr>
+                  <tr className="bd-net-row" style={{ color: platform.color }}><td colSpan="2">{t.netRevenueTo}</td><td>{formatCurrency(netRevenue)}</td></tr>
                 </tfoot>
               </table>
               <div className="platform-bar-wrap">
@@ -95,41 +96,41 @@ function PlatformSalesRow({ platformKey, platform, days, onUpsertDay }) {
                   <div className="platform-bar-net" style={{ background: platform.color, opacity: 0.2, width: `${Math.max(100 - effectiveRate, 0)}%` }} />
                 </div>
                 <div className="platform-bar-labels">
-                  <span style={{ color: platform.color }}>Platform takes {effectiveRate.toFixed(1)}%</span>
-                  <span>You keep {(100 - effectiveRate).toFixed(1)}%</span>
+                  <span style={{ color: platform.color }}>{t.platformTakes} {effectiveRate.toFixed(1)}%</span>
+                  <span>{t.youKeep} {(100 - effectiveRate).toFixed(1)}%</span>
                 </div>
               </div>
             </div>
           )}
-          <button className="btn-reset-platform" onClick={() => setRates({ ...platform })}>Reset to defaults</button>
+          <button className="btn-reset-platform" onClick={() => setRates({ ...platform })}>{t.resetToDefaults}</button>
         </div>
       )}
     </div>
   );
 }
 
-// Per-day platform sales entry
 function DayPlatformEntry({ date, day, onUpsertDay }) {
+  const { t } = useLang();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    doordash: day.doordash || '',
+    doordash:       day.doordash       || '',
     doordashOrders: day.doordashOrders || '',
-    ubereats: day.ubereats || '',
+    ubereats:       day.ubereats       || '',
     ubereatsOrders: day.ubereatsOrders || '',
-    grubhub: day.grubhub || '',
-    grubhubOrders: day.grubhubOrders || '',
+    grubhub:        day.grubhub        || '',
+    grubhubOrders:  day.grubhubOrders  || '',
   });
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSave = () => {
     onUpsertDay(date, {
-      doordash: parseFloat(form.doordash) || 0,
-      doordashOrders: parseInt(form.doordashOrders) || 0,
-      ubereats: parseFloat(form.ubereats) || 0,
-      ubereatsOrders: parseInt(form.ubereatsOrders) || 0,
-      grubhub: parseFloat(form.grubhub) || 0,
-      grubhubOrders: parseInt(form.grubhubOrders) || 0,
+      doordash:       parseFloat(form.doordash)       || 0,
+      doordashOrders: parseInt(form.doordashOrders)   || 0,
+      ubereats:       parseFloat(form.ubereats)       || 0,
+      ubereatsOrders: parseInt(form.ubereatsOrders)   || 0,
+      grubhub:        parseFloat(form.grubhub)        || 0,
+      grubhubOrders:  parseInt(form.grubhubOrders)    || 0,
     });
     setOpen(false);
   };
@@ -167,7 +168,7 @@ function DayPlatformEntry({ date, day, onUpsertDay }) {
                 <p className="day-form-section-label" style={{ color: p.color }}>{p.label}</p>
                 <div className="day-form-row">
                   <div className="day-form-field">
-                    <label className="target-label">Revenue</label>
+                    <label className="target-label">{t.labelRevenue}</label>
                     <div className="target-input-wrap">
                       <span className="target-prefix">$</span>
                       <input className="form-input form-input-sm" type="number" min="0" step="0.01"
@@ -176,7 +177,7 @@ function DayPlatformEntry({ date, day, onUpsertDay }) {
                     </div>
                   </div>
                   <div className="day-form-field">
-                    <label className="target-label">Orders</label>
+                    <label className="target-label">{t.labelOrders}</label>
                     <input className="form-input form-input-sm" type="number" min="0"
                       placeholder="0" value={form[p.ordKey]}
                       onChange={e => set(p.ordKey, e.target.value)} />
@@ -186,8 +187,8 @@ function DayPlatformEntry({ date, day, onUpsertDay }) {
             ))}
           </div>
           <div className="day-form-actions">
-            <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>Cancel</button>
-            <button className="btn btn-primary btn-sm" onClick={handleSave}>Save</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>{t.cancelBtn}</button>
+            <button className="btn btn-primary btn-sm" onClick={handleSave}>{t.saveBtn}</button>
           </div>
         </div>
       )}
@@ -196,9 +197,9 @@ function DayPlatformEntry({ date, day, onUpsertDay }) {
 }
 
 export default function DeliveryAnalysis({ days, dailySummary, onUpsertDay }) {
-  const [activeSection, setActiveSection] = useState('entry'); // entry | fees
+  const { t } = useLang();
+  const [activeSection, setActiveSection] = useState('entry');
 
-  // All days that have any platform data or just all days for entry
   const sortedDates = Object.keys(days).sort((a, b) => b.localeCompare(a));
 
   const totals = {
@@ -209,25 +210,23 @@ export default function DeliveryAnalysis({ days, dailySummary, onUpsertDay }) {
 
   return (
     <div className="delivery-analysis">
-      {/* SECTION TOGGLE */}
       <div className="da-section-toggle">
         <button className={`tab-btn ${activeSection === 'entry' ? 'active' : ''}`}
           onClick={() => setActiveSection('entry')}>
-          📋 Daily Platform Sales
+          {t.daPlatformSalesTab}
         </button>
         <button className={`tab-btn ${activeSection === 'fees' ? 'active' : ''}`}
           onClick={() => setActiveSection('fees')}>
-          💸 Fee Analysis
+          {t.daFeeAnalysisTab}
         </button>
       </div>
 
-      {/* DAILY PLATFORM ENTRY */}
       {activeSection === 'entry' && (
         <div>
           <div className="da-intro">
             <div>
-              <h3 className="ca-section-title">3rd Party Platform Sales</h3>
-              <p className="ca-section-sub">Track daily sales from DoorDash, Uber Eats, and Grubhub separately from your direct orders.</p>
+              <h3 className="ca-section-title">{t.daPlatformSalesTitle}</h3>
+              <p className="ca-section-sub">{t.daPlatformSalesSub}</p>
             </div>
             <div className="platform-totals-row">
               {Object.entries(totals).map(([key, val]) => (
@@ -239,7 +238,7 @@ export default function DeliveryAnalysis({ days, dailySummary, onUpsertDay }) {
           </div>
 
           {sortedDates.length === 0 ? (
-            <div className="ca-empty">Add daily records in the Daily Summary tab first, then enter platform sales here.</div>
+            <div className="ca-empty">{t.daNoData}</div>
           ) : (
             <div className="platform-list">
               {sortedDates.map(date => (
@@ -250,28 +249,32 @@ export default function DeliveryAnalysis({ days, dailySummary, onUpsertDay }) {
         </div>
       )}
 
-      {/* FEE ANALYSIS */}
       {activeSection === 'fees' && (
         <div>
           <div className="da-intro">
             <div>
-              <h3 className="ca-section-title">Platform Fee Analysis</h3>
-              <p className="ca-section-sub">Commission, processing, and marketing fees across all recorded sales.</p>
+              <h3 className="ca-section-title">{t.daFeeAnalysisTitle}</h3>
+              <p className="ca-section-sub">{t.daFeeAnalysisSub}</p>
             </div>
           </div>
           <div className="platform-list">
             {Object.entries(PLATFORMS).map(([key, p]) => (
-              <PlatformSalesRow key={key} platformKey={key} platform={p} days={days} onUpsertDay={onUpsertDay} />
+              <PlatformSalesRow key={key} platformKey={key} platform={p} days={days} />
             ))}
           </div>
 
-          {/* COMPARISON */}
           {(totals.doordash + totals.ubereats + totals.grubhub) > 0 && (
             <div className="comparison-section" style={{ marginTop: '1rem' }}>
-              <h4 className="comparison-title">Platform Comparison</h4>
+              <h4 className="comparison-title">{t.comparisonTitle}</h4>
               <table className="comparison-table">
                 <thead>
-                  <tr><th>Platform</th><th>Gross Revenue</th><th>Est. Deductions</th><th>Est. Net</th><th>You Keep</th></tr>
+                  <tr>
+                    <th>{t.colPlatform}</th>
+                    <th>{t.grossRevenue}</th>
+                    <th>{t.colEstDeductions}</th>
+                    <th>{t.colEstNet}</th>
+                    <th>{t.colYouKeep}</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {Object.entries(PLATFORMS).map(([key, p]) => {

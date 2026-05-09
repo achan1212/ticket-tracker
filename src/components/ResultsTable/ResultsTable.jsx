@@ -46,7 +46,7 @@ export default function ResultsTable({ scannedItems, manualItems, onAddItem, onR
     <div className="results-wrap">
       <div className="results-header">
         <div className="results-meta">
-          <h2>{t.tabSummary.split('订')[0] ? 'Order Scanner' : '订单扫描仪'}</h2>
+          <h2>{t.headerTitle}</h2>
           <span className="item-count">{allItems.length} {allItems.length !== 1 ? t.itemsPlural : t.items}</span>
         </div>
         <div className="results-actions">

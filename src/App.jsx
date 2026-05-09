@@ -1,24 +1,26 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-
-const ScannerTab = lazy(() => import('@components/ScannerTab/ScannerTab'));
 import { useOrderStore } from '@hooks/useOrderStore';
 import { useMonthlyStore } from '@hooks/useMonthlyStore';
+import { useTheme } from '@hooks/useTheme';
 import { useLang } from './i18n/LangContext.jsx';
-import DailySummaryTable from '@components/DailySummaryTable/DailySummaryTable.jsx';
-import MonthlySummaryTable from '@components/MonthlySummaryTable/MonthlySummaryTable.jsx';
-import Dashboard from '@components/Dashboard/Dashboard.jsx';
-import CostAnalysis from '@components/CostAnalysis/CostAnalysis';
-import DeliveryAnalysis from '@components/DeliveryAnalysis/DeliveryAnalysis';
-import SheetPanel from '@components/SheetPanel/SheetPanel';
 import '@styles/index.css';
+
+const DailySummaryTable   = lazy(() => import('@components/DailySummaryTable/DailySummaryTable.jsx'));
+const MonthlySummaryTable = lazy(() => import('@components/MonthlySummaryTable/MonthlySummaryTable.jsx'));
+const Dashboard           = lazy(() => import('@components/Dashboard/Dashboard.jsx'));
+const CostAnalysis        = lazy(() => import('@components/CostAnalysis/CostAnalysis'));
+const DeliveryAnalysis    = lazy(() => import('@components/DeliveryAnalysis/DeliveryAnalysis'));
+const SheetPanel          = lazy(() => import('@components/SheetPanel/SheetPanel'));
+const ScannerTab          = lazy(() => import('@components/ScannerTab/ScannerTab'));
 
 const TAB_KEYS = ['summary', 'monthly', 'dashboard', 'delivery', 'analysis', 'sheets', 'scanner'];
 
 export default function App() {
-  const { days, upsertDay, removeDay, importDays, dailySummary } = useOrderStore();
+  const { days, upsertDay, removeDay, dailySummary } = useOrderStore();
   const { months, upsertMonth, removeMonth } = useMonthlyStore();
   const { lang, setLang, LANGUAGES, t } = useLang();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -40,7 +42,6 @@ export default function App() {
   }, [pathTab, navigate]);
 
   const [itemCosts, setItemCosts] = useState({});
-  const [deliveryRates, setDeliveryRates] = useState({});
 
   const allItems = dailySummary.map(d => ({
     name: `Day ${d.date}`,
@@ -52,15 +53,23 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-inner">
-          <span className="header-tag">FREE · NO API KEY</span>
-          <h1>Order<br />Scanner</h1>
-          <p className="header-sub">Track daily sales, compare delivery vs pickup, and analyze platform fees.</p>
+          <span className="header-tag">{t.headerTag}</span>
+          <h1>{t.headerTitle}</h1>
+          <p className="header-sub">{t.headerSub}</p>
         </div>
-        <div className="lang-toggle">
-          {LANGUAGES.map(l => (
-            <button key={l.code} className={`lang-btn ${lang === l.code ? 'active' : ''}`}
-              onClick={() => setLang(l.code)} title={l.name}>{l.label}</button>
-          ))}
+        <div className="header-controls">
+          <div className="theme-toggle">
+            <button className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
+              onClick={() => setTheme('dark')} title="Dark mode" aria-label="Dark mode">🌙</button>
+            <button className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
+              onClick={() => setTheme('light')} title="Light mode" aria-label="Light mode">☀️</button>
+          </div>
+          <div className="lang-toggle">
+            {LANGUAGES.map(l => (
+              <button key={l.code} className={`lang-btn ${lang === l.code ? 'active' : ''}`}
+                onClick={() => setLang(l.code)} title={l.name}>{l.label}</button>
+            ))}
+          </div>
         </div>
       </header>
 
@@ -75,45 +84,44 @@ export default function App() {
       </div>
 
       <main className="app-main app-main-tabs">
-        {activeTab === 'summary' && (
-          <DailySummaryTable
-            dailySummary={dailySummary}
-            days={days}
-            onUpsertDay={upsertDay}
-            onRemoveDay={removeDay}
-          />
-        )}
-        {activeTab === 'monthly' && (
-          <MonthlySummaryTable
-            dailySummary={dailySummary}
-            months={months}
-            onUpsertMonth={upsertMonth}
-            onRemoveMonth={removeMonth}
-          />
-        )}
-        {activeTab === 'dashboard' && (
-          <Dashboard dailySummary={dailySummary} days={days} months={months} />
-        )}
-        {activeTab === 'delivery' && (
-          <DeliveryAnalysis days={days} dailySummary={dailySummary} onUpsertDay={upsertDay} />
-        )}
-        {activeTab === 'analysis' && (
-          <CostAnalysis items={allItems} itemCosts={itemCosts} onItemCostsChange={setItemCosts} />
-        )}
-        {activeTab === 'scanner' && (
-          <Suspense fallback={<div className="ca-empty">Loading scanner…</div>}>
-            <ScannerTab />
-          </Suspense>
-        )}
-        {activeTab === 'sheets' && (
-          <SheetPanel
-            items={dailySummary.map(d => ({ name: d.date, cost: d.revenue, quantity: 1, addedAt: d.date }))}
-            itemCosts={itemCosts}
-            deliveryRates={deliveryRates}
-            orderCount={dailySummary.reduce((s, d) => s + d.orderCount, 0)}
-            onImport={(imported) => imported.forEach(i => upsertDay(i.date || i.name, i))}
-          />
-        )}
+        <Suspense fallback={<div className="ca-empty">Loading…</div>}>
+          {activeTab === 'summary' && (
+            <DailySummaryTable
+              dailySummary={dailySummary}
+              days={days}
+              onUpsertDay={upsertDay}
+              onRemoveDay={removeDay}
+            />
+          )}
+          {activeTab === 'monthly' && (
+            <MonthlySummaryTable
+              dailySummary={dailySummary}
+              months={months}
+              onUpsertMonth={upsertMonth}
+              onRemoveMonth={removeMonth}
+            />
+          )}
+          {activeTab === 'dashboard' && (
+            <Dashboard dailySummary={dailySummary} days={days} months={months} />
+          )}
+          {activeTab === 'delivery' && (
+            <DeliveryAnalysis days={days} dailySummary={dailySummary} onUpsertDay={upsertDay} />
+          )}
+          {activeTab === 'analysis' && (
+            <CostAnalysis items={allItems} itemCosts={itemCosts} onItemCostsChange={setItemCosts} />
+          )}
+          {activeTab === 'scanner' && <ScannerTab />}
+          {activeTab === 'sheets' && (
+            <SheetPanel
+              dailySummary={dailySummary}
+              months={months}
+              onImport={({ days, months: importedMonths }) => {
+                days.forEach(d => upsertDay(d.date, d));
+                importedMonths.forEach(m => upsertMonth(m.month, m));
+              }}
+            />
+          )}
+        </Suspense>
       </main>
     </div>
   );

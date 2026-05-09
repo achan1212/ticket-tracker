@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { formatCurrency } from '@utils/helpers';
+import { useLang } from '../../i18n/LangContext.jsx';
 import './MonthlySummaryTable.css';
 
 function currentMonthISO() {
@@ -18,14 +19,8 @@ function formatDate(iso) {
     .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-const EMPTY_FORM = {
-  deliveryRevenue: '', pickupRevenue: '',
-  deliveryOrders: '',  pickupOrders: '',
-  categories: {},
-  notes: '',
-};
-
 function MonthForm({ initial, onSave, onCancel }) {
+  const { t } = useLang();
   const [form, setForm] = useState({
     deliveryRevenue: initial?.deliveryRevenue || '',
     pickupRevenue:   initial?.pickupRevenue   || '',
@@ -42,7 +37,6 @@ function MonthForm({ initial, onSave, onCancel }) {
     if (!categoryInput.name.trim() || !categoryInput.cost) return;
     const cost = parseFloat(categoryInput.cost);
     if (isNaN(cost) || cost < 0) return;
-
     setForm(f => ({
       ...f,
       categories: { ...f.categories, [categoryInput.name.trim()]: cost }
@@ -58,8 +52,8 @@ function MonthForm({ initial, onSave, onCancel }) {
     });
   };
 
-  const totalRevenue = (parseFloat(form.deliveryRevenue) || 0) + (parseFloat(form.pickupRevenue) || 0);
-  const totalOrders  = (parseInt(form.deliveryOrders)    || 0) + (parseInt(form.pickupOrders)    || 0);
+  const totalRevenue  = (parseFloat(form.deliveryRevenue) || 0) + (parseFloat(form.pickupRevenue) || 0);
+  const totalOrders   = (parseInt(form.deliveryOrders)    || 0) + (parseInt(form.pickupOrders)    || 0);
   const categoryTotal = Object.values(form.categories).reduce((sum, val) => sum + val, 0);
   const hasCategories = Object.keys(form.categories).length > 0;
   const categoryMatch = hasCategories ? Math.abs(categoryTotal - totalRevenue) < 0.01 : true;
@@ -72,6 +66,7 @@ function MonthForm({ initial, onSave, onCancel }) {
       pickupOrders:    parseInt(form.pickupOrders)      || 0,
       categories:      form.categories,
       notes:           form.notes.trim(),
+      source:          'manual',
     });
   };
 
@@ -79,10 +74,10 @@ function MonthForm({ initial, onSave, onCancel }) {
     <div className="day-form">
       <div className="day-form-grid">
         <div className="day-form-section">
-          <p className="day-form-section-label">🛵 Delivery</p>
+          <p className="day-form-section-label">{t.labelDelivery}</p>
           <div className="day-form-row">
             <div className="day-form-field">
-              <label className="target-label">Revenue</label>
+              <label className="target-label">{t.labelRevenue}</label>
               <div className="target-input-wrap">
                 <span className="target-prefix">$</span>
                 <input className="form-input form-input-sm" type="number" min="0" step="0.01"
@@ -91,7 +86,7 @@ function MonthForm({ initial, onSave, onCancel }) {
               </div>
             </div>
             <div className="day-form-field">
-              <label className="target-label">Orders</label>
+              <label className="target-label">{t.labelOrders}</label>
               <input className="form-input form-input-sm" type="number" min="0" step="1"
                 placeholder="0" value={form.deliveryOrders}
                 onChange={e => set('deliveryOrders', e.target.value)} />
@@ -100,10 +95,10 @@ function MonthForm({ initial, onSave, onCancel }) {
         </div>
 
         <div className="day-form-section">
-          <p className="day-form-section-label">🏪 Pickup</p>
+          <p className="day-form-section-label">{t.labelPickup}</p>
           <div className="day-form-row">
             <div className="day-form-field">
-              <label className="target-label">Revenue</label>
+              <label className="target-label">{t.labelRevenue}</label>
               <div className="target-input-wrap">
                 <span className="target-prefix">$</span>
                 <input className="form-input form-input-sm" type="number" min="0" step="0.01"
@@ -112,7 +107,7 @@ function MonthForm({ initial, onSave, onCancel }) {
               </div>
             </div>
             <div className="day-form-field">
-              <label className="target-label">Orders</label>
+              <label className="target-label">{t.labelOrders}</label>
               <input className="form-input form-input-sm" type="number" min="0" step="1"
                 placeholder="0" value={form.pickupOrders}
                 onChange={e => set('pickupOrders', e.target.value)} />
@@ -122,17 +117,15 @@ function MonthForm({ initial, onSave, onCancel }) {
       </div>
 
       <div className="day-form-field" style={{ marginTop: '0.75rem' }}>
-        <label className="target-label">Notes (optional)</label>
-        <input className="form-input" placeholder="e.g. holiday month, renovation..."
+        <label className="target-label">{t.formNotesOptional}</label>
+        <input className="form-input" placeholder={t.formNotesPlaceholderMonth}
           value={form.notes} onChange={e => set('notes', e.target.value)} />
       </div>
 
-      {/* CATEGORIES SECTION */}
       <div className="day-form-section" style={{ marginTop: '0.75rem' }}>
-        <label className="day-form-section-label">🍕 Revenue Categories</label>
-        <p className="category-help-text">Break down your revenue by food type (optional)</p>
+        <label className="day-form-section-label">{t.revenueCategories}</label>
+        <p className="category-help-text">{t.categoriesHelpText}</p>
 
-        {/* Existing Categories */}
         {Object.keys(form.categories).length > 0 && (
           <div className="category-list">
             {Object.entries(form.categories).map(([name, cost]) => (
@@ -145,11 +138,10 @@ function MonthForm({ initial, onSave, onCancel }) {
           </div>
         )}
 
-        {/* Add New Category */}
         <div className="category-input-row">
           <input
             className="form-input"
-            placeholder="Category name (e.g. Pizza, Pasta, Drinks)"
+            placeholder={t.categoryNamePlaceholder}
             value={categoryInput.name}
             onChange={e => setCategoryInput(prev => ({ ...prev, name: e.target.value }))}
             onKeyPress={e => e.key === 'Enter' && addCategory()}
@@ -158,60 +150,54 @@ function MonthForm({ initial, onSave, onCancel }) {
             <span className="target-prefix">$</span>
             <input
               className="form-input form-input-sm"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0.00"
+              type="number" min="0" step="0.01" placeholder="0.00"
               value={categoryInput.cost}
               onChange={e => setCategoryInput(prev => ({ ...prev, cost: e.target.value }))}
               onKeyPress={e => e.key === 'Enter' && addCategory()}
             />
           </div>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={addCategory}>Add</button>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={addCategory}>{t.addShortBtn}</button>
         </div>
 
-        {/* Category validation warning */}
         {hasCategories && !categoryMatch && (
           <div className="category-warning">
-            ⚠️ Categories total {formatCurrency(categoryTotal)} but revenue is {formatCurrency(totalRevenue)}
+            {t.categoryWarningPre} {formatCurrency(categoryTotal)} {t.categoryWarningMid} {formatCurrency(totalRevenue)}
           </div>
         )}
       </div>
 
       <div className="day-form-totals">
-        <span className="dft-item">Total Revenue: <strong>{formatCurrency(totalRevenue)}</strong></span>
-        <span className="dft-item">Total Orders: <strong>{totalOrders}</strong></span>
+        <span className="dft-item">{t.formTotalRevenue} <strong>{formatCurrency(totalRevenue)}</strong></span>
+        <span className="dft-item">{t.formTotalOrders} <strong>{totalOrders}</strong></span>
         {totalOrders > 0 && (
-          <span className="dft-item">Avg: <strong>{formatCurrency(totalRevenue / totalOrders)}</strong></span>
+          <span className="dft-item">{t.formAvgLabel} <strong>{formatCurrency(totalRevenue / totalOrders)}</strong></span>
         )}
-        {hasCategories && <span className="dft-item">Category Total: <strong style={{ color: categoryMatch ? 'inherit' : 'var(--danger)' }}>{formatCurrency(categoryTotal)}</strong></span>}
+        {hasCategories && (
+          <span className="dft-item">{t.formCategoryTotal} <strong style={{ color: categoryMatch ? 'inherit' : 'var(--danger)' }}>{formatCurrency(categoryTotal)}</strong></span>
+        )}
       </div>
 
       <div className="day-form-actions">
-        <button className="btn btn-ghost btn-sm" onClick={onCancel}>Cancel</button>
-        <button className="btn btn-primary btn-sm" onClick={handleSave}>Save Month</button>
+        <button className="btn btn-ghost btn-sm" onClick={onCancel}>{t.cancelBtn}</button>
+        <button className="btn btn-primary btn-sm" onClick={handleSave}>{t.saveMonthBtn}</button>
       </div>
     </div>
   );
 }
 
 export default function MonthlySummaryTable({ dailySummary, months, onUpsertMonth, onRemoveMonth }) {
+  const { t } = useLang();
   const [expandedMonth, setExpandedMonth] = useState(null);
   const [editingMonth, setEditingMonth]   = useState(null);
   const [showAddForm, setShowAddForm]     = useState(false);
   const [addingMonth, setAddingMonth]     = useState(currentMonthISO());
 
-  // Aggregate daily records by month
   const dailyByMonth = useMemo(() => {
     const byMonth = {};
     dailySummary.forEach(d => {
       const key = d.date.slice(0, 7);
       if (!byMonth[key]) {
-        byMonth[key] = {
-          deliveryRevenue: 0, pickupRevenue: 0,
-          deliveryOrders: 0,  pickupOrders: 0,
-          days: [],
-        };
+        byMonth[key] = { deliveryRevenue: 0, pickupRevenue: 0, deliveryOrders: 0, pickupOrders: 0, days: [] };
       }
       byMonth[key].deliveryRevenue += d.deliveryRevenue || 0;
       byMonth[key].pickupRevenue   += d.pickupRevenue   || 0;
@@ -222,28 +208,20 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
     return byMonth;
   }, [dailySummary]);
 
-  // Merge all month keys from both sources
   const allMonths = useMemo(() => {
     const keys = new Set([...Object.keys(dailyByMonth), ...Object.keys(months)]);
     return Array.from(keys).sort((a, b) => b.localeCompare(a)).map(key => {
       const daily  = dailyByMonth[key] || null;
       const manual = months[key]       || null;
-
       const deliveryRevenue = (daily?.deliveryRevenue || 0) + (manual?.deliveryRevenue || 0);
       const pickupRevenue   = (daily?.pickupRevenue   || 0) + (manual?.pickupRevenue   || 0);
       const deliveryOrders  = (daily?.deliveryOrders  || 0) + (manual?.deliveryOrders  || 0);
       const pickupOrders    = (daily?.pickupOrders    || 0) + (manual?.pickupOrders    || 0);
       const revenue    = deliveryRevenue + pickupRevenue;
       const orderCount = deliveryOrders  + pickupOrders;
-
       return {
-        key,
-        daily,
-        manual,
-        revenue,
-        orderCount,
-        deliveryRevenue,
-        pickupRevenue,
+        key, daily, manual, revenue, orderCount,
+        deliveryRevenue, pickupRevenue,
         avgOrderValue: orderCount > 0 ? revenue / orderCount : 0,
       };
     });
@@ -264,46 +242,43 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
   return (
     <div className="monthly-summary">
 
-      {/* CONTROLS */}
       <div className="ds-controls">
-        <div /> {/* spacer */}
+        <div />
         <button className="btn btn-primary btn-sm"
           onClick={() => { setAddingMonth(currentMonthISO()); setShowAddForm(true); }}>
-          + Add Month
+          {t.addMonthBtn}
         </button>
       </div>
 
-      {/* ADD FORM */}
       {showAddForm && (
         <div className="day-card">
           <div className="day-card-header" style={{ cursor: 'default' }}>
             <div className="day-date-col">
-              <span className="day-date">New Monthly Entry</span>
+              <span className="day-date">{t.newMonthEntryLabel}</span>
             </div>
             <input type="month" className="form-input date-input"
               value={addingMonth} max={currentMonthISO()}
-              onChange={e => setAddingMonth(e.target.value)} />
+              onChange={e => setAddingMonth(e.target.value)}
+              onClick={e => e.currentTarget.showPicker?.()} />
           </div>
           <MonthForm
-            initial={EMPTY_FORM}
+            initial={{ deliveryRevenue: '', pickupRevenue: '', deliveryOrders: '', pickupOrders: '', categories: {}, notes: '' }}
             onSave={handleAddSave}
             onCancel={() => setShowAddForm(false)}
           />
         </div>
       )}
 
-      {/* EMPTY STATE */}
       {!showAddForm && allMonths.length === 0 && (
         <div className="ds-empty">
-          <p>No monthly records yet. Click <strong>Add Month</strong> to enter monthly totals, or add daily records in the Daily Summary tab.</p>
+          <p>{t.emptyMonthlyPre} <strong>{t.addMonthBtn}</strong> {t.emptyMonthlySuffix}</p>
           <button className="btn btn-primary"
             onClick={() => { setAddingMonth(currentMonthISO()); setShowAddForm(true); }}>
-            + Add This Month
+            {t.addThisMonthBtn}
           </button>
         </div>
       )}
 
-      {/* MONTH CARDS */}
       {allMonths.map(month => (
         <div key={month.key} className="day-card">
           <div className="day-card-header"
@@ -312,34 +287,39 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
               <span className="day-date">{formatMonthYear(month.key)}</span>
               <div className="day-type-pills">
                 {month.deliveryRevenue > 0 && (
-                  <span className="type-pill delivery">🛵 {formatCurrency(month.deliveryRevenue)}</span>
+                  <span className="type-pill delivery">{t.labelDelivery} {formatCurrency(month.deliveryRevenue)}</span>
                 )}
                 {month.pickupRevenue > 0 && (
-                  <span className="type-pill pickup">🏪 {formatCurrency(month.pickupRevenue)}</span>
+                  <span className="type-pill pickup">{t.labelPickup} {formatCurrency(month.pickupRevenue)}</span>
                 )}
                 {month.daily && (
-                  <span className="month-days-count">{month.daily.days.length} day{month.daily.days.length !== 1 ? 's' : ''}</span>
+                  <span className="month-days-count">
+                    {month.daily.days.length} {month.daily.days.length !== 1 ? t.daysPlural : t.days}
+                  </span>
                 )}
-                {month.manual && (
-                  <span className="month-source-badge manual">manual</span>
+                {month.manual && month.manual.source === 'imported' && (
+                  <span className="source-badge imported">{t.importedBadge}</span>
+                )}
+                {month.manual && month.manual.source !== 'imported' && (
+                  <span className="source-badge manual">{t.manualBadge}</span>
                 )}
                 {month.manual?.categories && Object.keys(month.manual.categories).length > 0 && (
-                  <span className="type-pill category-pill">💰 {Object.keys(month.manual.categories).length} categories</span>
+                  <span className="type-pill category-pill">💰 {Object.keys(month.manual.categories).length} {t.categoriesBadge}</span>
                 )}
               </div>
             </div>
 
             <div className="day-stats">
               <div className="day-stat">
-                <span className="day-stat-label">Revenue</span>
+                <span className="day-stat-label">{t.labelRevenue}</span>
                 <span className="day-stat-value">{formatCurrency(month.revenue)}</span>
               </div>
               <div className="day-stat">
-                <span className="day-stat-label">Orders</span>
+                <span className="day-stat-label">{t.labelOrders}</span>
                 <span className="day-stat-value">{month.orderCount}</span>
               </div>
               <div className="day-stat">
-                <span className="day-stat-label">Avg</span>
+                <span className="day-stat-label">{t.labelAvg}</span>
                 <span className="day-stat-value">
                   {month.orderCount > 0 ? formatCurrency(month.avgOrderValue) : '—'}
                 </span>
@@ -350,7 +330,7 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
               {month.manual && editingMonth !== month.key && (
                 <button className="btn btn-ghost btn-sm"
                   onClick={e => { e.stopPropagation(); setEditingMonth(month.key); }}>
-                  Edit
+                  {t.editBtn}
                 </button>
               )}
               {month.manual && (
@@ -362,7 +342,6 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
             </div>
           </div>
 
-          {/* EDIT FORM for manual entry */}
           {editingMonth === month.key && (
             <MonthForm
               initial={months[month.key]}
@@ -371,35 +350,33 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
             />
           )}
 
-          {/* EXPANDED: daily breakdown */}
           {expandedMonth === month.key && editingMonth !== month.key && (
             <div className="month-day-list">
-              {/* Manual entry summary row */}
               {month.manual && (
-                <div className="month-day-row month-manual-row">
+                <div className={`month-day-row ${month.manual.source === 'imported' ? 'month-imported-row' : 'month-manual-row'}`}>
                   <div className="month-day-date">
-                    <span className="month-source-badge manual">manual entry</span>
+                    <span className={`source-badge ${month.manual.source === 'imported' ? 'imported' : 'manual'}`}>
+                      {month.manual.source === 'imported' ? t.importedEntryLabel : t.manualEntryLabel}
+                    </span>
                   </div>
                   <div className="day-type-pills">
                     {(month.manual.deliveryRevenue || 0) > 0 && (
-                      <span className="type-pill delivery">🛵 {formatCurrency(month.manual.deliveryRevenue)}</span>
+                      <span className="type-pill delivery">{t.labelDelivery} {formatCurrency(month.manual.deliveryRevenue)}</span>
                     )}
                     {(month.manual.pickupRevenue || 0) > 0 && (
-                      <span className="type-pill pickup">🏪 {formatCurrency(month.manual.pickupRevenue)}</span>
+                      <span className="type-pill pickup">{t.labelPickup} {formatCurrency(month.manual.pickupRevenue)}</span>
                     )}
-                    {month.manual.notes && (
-                      <span className="notes-pill">📝 {month.manual.notes}</span>
-                    )}
+                    {month.manual.notes && <span className="notes-pill">📝 {month.manual.notes}</span>}
                   </div>
                   <div className="day-stats">
                     <div className="day-stat">
-                      <span className="day-stat-label">Revenue</span>
+                      <span className="day-stat-label">{t.labelRevenue}</span>
                       <span className="day-stat-value">
                         {formatCurrency((month.manual.deliveryRevenue || 0) + (month.manual.pickupRevenue || 0))}
                       </span>
                     </div>
                     <div className="day-stat">
-                      <span className="day-stat-label">Orders</span>
+                      <span className="day-stat-label">{t.labelOrders}</span>
                       <span className="day-stat-value">
                         {(month.manual.deliveryOrders || 0) + (month.manual.pickupOrders || 0)}
                       </span>
@@ -408,7 +385,6 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
                 </div>
               )}
 
-              {/* Daily records */}
               {month.daily && [...month.daily.days]
                 .sort((a, b) => b.date.localeCompare(a.date))
                 .map(day => (
@@ -416,24 +392,24 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
                     <div className="month-day-date">{formatDate(day.date)}</div>
                     <div className="day-type-pills">
                       {(day.deliveryRevenue || 0) > 0 && (
-                        <span className="type-pill delivery">🛵 {formatCurrency(day.deliveryRevenue)}</span>
+                        <span className="type-pill delivery">{t.labelDelivery} {formatCurrency(day.deliveryRevenue)}</span>
                       )}
                       {(day.pickupRevenue || 0) > 0 && (
-                        <span className="type-pill pickup">🏪 {formatCurrency(day.pickupRevenue)}</span>
+                        <span className="type-pill pickup">{t.labelPickup} {formatCurrency(day.pickupRevenue)}</span>
                       )}
                       {day.notes && <span className="notes-pill">📝 {day.notes}</span>}
                     </div>
                     <div className="day-stats">
                       <div className="day-stat">
-                        <span className="day-stat-label">Revenue</span>
+                        <span className="day-stat-label">{t.labelRevenue}</span>
                         <span className="day-stat-value">{formatCurrency(day.revenue)}</span>
                       </div>
                       <div className="day-stat">
-                        <span className="day-stat-label">Orders</span>
+                        <span className="day-stat-label">{t.labelOrders}</span>
                         <span className="day-stat-value">{day.orderCount}</span>
                       </div>
                       <div className="day-stat">
-                        <span className="day-stat-label">Avg</span>
+                        <span className="day-stat-label">{t.labelAvg}</span>
                         <span className="day-stat-value">
                           {day.orderCount > 0 ? formatCurrency(day.avgOrderValue) : '—'}
                         </span>

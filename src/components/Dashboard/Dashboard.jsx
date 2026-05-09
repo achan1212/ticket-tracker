@@ -4,6 +4,7 @@ import {
   Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell
 } from 'recharts';
 import { formatCurrency } from '@utils/helpers';
+import { useLang } from '../../i18n/LangContext.jsx';
 import './Dashboard.css';
 
 const ACCENT = '#e8ff47';
@@ -84,7 +85,7 @@ function CustomTooltip({ active, payload, label }) {
       {payload.map((p, i) => (
         <p key={i} className="ct-row" style={{ color: p.color }}>
           <span>{p.name}</span>
-          <span>{p.name === 'Orders' ? p.value : formatCurrency(p.value)}</span>
+          <span>{p.dataKey === 'orders' ? p.value : formatCurrency(p.value)}</span>
         </p>
       ))}
     </div>
@@ -92,6 +93,7 @@ function CustomTooltip({ active, payload, label }) {
 }
 
 export default function Dashboard({ dailySummary, days, months }) {
+  const { t } = useLang();
   const [fromDate, setFromDate] = useState(daysAgoISO(30));
   const [toDate, setToDate] = useState(todayISO());
   const [activePreset, setActivePreset] = useState('30d');
@@ -214,11 +216,10 @@ export default function Dashboard({ dailySummary, days, months }) {
       {/* ── DATE RANGE SELECTOR ── */}
       <div className="dash-range-card">
         <div className="dash-range-top">
-          <span className="dash-range-label">Date Range</span>
-          {rangeLabel && <span className="dash-range-custom-label">Custom: {rangeLabel}</span>}
+          <span className="dash-range-label">{t.dashDateRange}</span>
+          {rangeLabel && <span className="dash-range-custom-label">{t.dashCustom} {rangeLabel}</span>}
         </div>
 
-        {/* PRESET PILLS */}
         <div className="dash-range-pills">
           {PRESETS.map(p => (
             <button key={p.label}
@@ -229,68 +230,67 @@ export default function Dashboard({ dailySummary, days, months }) {
           ))}
         </div>
 
-        {/* CUSTOM DATE INPUTS */}
         <div className="dash-custom-range">
           <div className="dash-date-field">
-            <label className="target-label">From</label>
+            <label className="target-label">{t.dashFrom}</label>
             <input type="date" className="form-input date-input"
               value={fromDate} max={toDate}
-              onChange={(e) => handleFromChange(e.target.value)} />
+              onChange={(e) => handleFromChange(e.target.value)}
+              onClick={e => e.currentTarget.showPicker?.()} />
           </div>
           <span className="dash-date-sep">→</span>
           <div className="dash-date-field">
-            <label className="target-label">To</label>
+            <label className="target-label">{t.dashTo}</label>
             <input type="date" className="form-input date-input"
               value={toDate} min={fromDate} max={todayISO()}
-              onChange={(e) => handleToChange(e.target.value)} />
+              onChange={(e) => handleToChange(e.target.value)}
+              onClick={e => e.currentTarget.showPicker?.()} />
           </div>
           <div className="dash-span-info">
             <span className="dash-span-value">{spanDays}</span>
-            <span className="dash-span-unit">days</span>
+            <span className="dash-span-unit">{t.daysPlural}</span>
           </div>
         </div>
       </div>
 
       {noData ? (
-        <div className="ca-empty">No order data for this period. Add orders in the Daily Summary tab.</div>
+        <div className="ca-empty">{t.dashNoData}</div>
       ) : (
         <>
           {isAggregated && (
-            <div className="dash-agg-notice">
-              📅 Showing monthly aggregates for this date range
-            </div>
+            <div className="dash-agg-notice">{t.dashMonthlyAgg}</div>
           )}
 
           {/* SUMMARY CARDS */}
           <div className="dash-cards">
             <div className="dash-card">
-              <p className="dash-card-label">Total Revenue</p>
+              <p className="dash-card-label">{t.totalRevenue}</p>
               <p className="dash-card-value">{formatCurrency(totals.revenue)}</p>
-              <p className="dash-card-sub">{spanDays} day range</p>
+              <p className="dash-card-sub">{spanDays} {t.dashDayRange}</p>
             </div>
             <div className="dash-card">
-              <p className="dash-card-label">Total Orders</p>
+              <p className="dash-card-label">{t.labelOrders}</p>
               <p className="dash-card-value">{totals.orderCount}</p>
-              <p className="dash-card-sub">{spanDays} day range</p>
+              <p className="dash-card-sub">{spanDays} {t.dashDayRange}</p>
             </div>
             <div className="dash-card">
-              <p className="dash-card-label">Avg Order Value</p>
+              <p className="dash-card-label">{t.dashAvgOrderValue}</p>
               <p className="dash-card-value">{formatCurrency(totals.avg)}</p>
-              <p className="dash-card-sub">Per order</p>
+              <p className="dash-card-sub">{t.dashPerOrder}</p>
             </div>
             <div className="dash-card highlight">
-              <p className="dash-card-label">🛵 Delivery Rev</p>
+              <p className="dash-card-label">{t.dashDeliveryRev}</p>
               <p className="dash-card-value" style={{ color: DELIVERY_COLOR }}>{formatCurrency(totals.deliveryRev)}</p>
-              <p className="dash-card-sub">{totals.revenue > 0 ? ((totals.deliveryRev / totals.revenue) * 100).toFixed(1) : 0}% of total</p>
+              <p className="dash-card-sub">{totals.revenue > 0 ? ((totals.deliveryRev / totals.revenue) * 100).toFixed(1) : 0}{t.dashOfTotal}</p>
             </div>
             <div className="dash-card highlight">
-              <p className="dash-card-label">🏪 Pickup Rev</p>
+              <p className="dash-card-label">{t.dashPickupRev}</p>
               <p className="dash-card-value" style={{ color: PICKUP_COLOR }}>{formatCurrency(totals.pickupRev)}</p>
-              <p className="dash-card-sub">{totals.revenue > 0 ? ((totals.pickupRev / totals.revenue) * 100).toFixed(1) : 0}% of total</p>
+              <p className="dash-card-sub">{totals.revenue > 0 ? ((totals.pickupRev / totals.revenue) * 100).toFixed(1) : 0}{t.dashOfTotal}</p>
             </div>
             {totals.bestDay && (
               <div className="dash-card">
-                <p className="dash-card-label">Best Day</p>
+                <p className="dash-card-label">{t.dashBestDay}</p>
                 <p className="dash-card-value">{formatCurrency(totals.bestDay.revenue)}</p>
                 <p className="dash-card-sub">{totals.bestDay.fullDate}</p>
               </div>
@@ -299,8 +299,8 @@ export default function Dashboard({ dailySummary, days, months }) {
 
           {/* REVENUE OVER TIME */}
           <div className="chart-card">
-            <h4 className="chart-title">Revenue Over Time</h4>
-            <p className="chart-sub">Delivery vs Pickup {isAggregated ? 'monthly' : 'daily'} breakdown</p>
+            <h4 className="chart-title">{t.dashRevenueOverTime}</h4>
+            <p className="chart-sub">{t.dashDeliveryVsPickupLabel} {isAggregated ? t.dashMonthly : t.dashDaily} {t.dashBreakdownSuffix}</p>
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
@@ -318,8 +318,8 @@ export default function Dashboard({ dailySummary, days, months }) {
                 <YAxis tickFormatter={v => `$${v}`} tick={{ fill: '#666', fontSize: 11 }} width={55} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ fontSize: '12px', color: '#888' }} />
-                <Area type="monotone" dataKey="delivery" name="Delivery" stroke={DELIVERY_COLOR} fill="url(#gDelivery)" strokeWidth={2} dot={false} />
-                <Area type="monotone" dataKey="pickup" name="Pickup" stroke={PICKUP_COLOR} fill="url(#gPickup)" strokeWidth={2} dot={false} />
+                <Area type="monotone" dataKey="delivery" name={t.chartDelivery} stroke={DELIVERY_COLOR} fill="url(#gDelivery)" strokeWidth={2} dot={false} />
+                <Area type="monotone" dataKey="pickup" name={t.chartPickup} stroke={PICKUP_COLOR} fill="url(#gPickup)" strokeWidth={2} dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -327,29 +327,29 @@ export default function Dashboard({ dailySummary, days, months }) {
           {/* ORDER COUNT + AVG ORDER VALUE */}
           <div className="chart-row">
             <div className="chart-card">
-              <h4 className="chart-title">Order Count</h4>
-              <p className="chart-sub">{isAggregated ? 'Monthly' : 'Daily'} orders</p>
+              <h4 className="chart-title">{t.dashOrderCountTitle}</h4>
+              <p className="chart-sub">{isAggregated ? t.dashMonthly : t.dashDaily} {t.dashOrdersUnit}</p>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
                   <XAxis dataKey="date" tick={{ fill: '#666', fontSize: 10 }} interval="preserveStartEnd" />
                   <YAxis tick={{ fill: '#666', fontSize: 10 }} width={30} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="orders" name="Orders" fill={ACCENT} radius={[3, 3, 0, 0]} opacity={0.85} />
+                  <Bar dataKey="orders" name={t.chartOrders} fill={ACCENT} radius={[3, 3, 0, 0]} opacity={0.85} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
             <div className="chart-card">
-              <h4 className="chart-title">Avg Order Value</h4>
-              <p className="chart-sub">Average revenue per order</p>
+              <h4 className="chart-title">{t.dashAvgOrderValue}</h4>
+              <p className="chart-sub">{t.dashAvgPerOrder}</p>
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
                   <XAxis dataKey="date" tick={{ fill: '#666', fontSize: 10 }} interval="preserveStartEnd" />
                   <YAxis tickFormatter={v => `$${v}`} tick={{ fill: '#666', fontSize: 10 }} width={45} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Line type="monotone" dataKey="avg" name="Avg Value" stroke={ACCENT} strokeWidth={2} dot={spanDays <= 30} />
+                  <Line type="monotone" dataKey="avg" name={t.chartAvgValue} stroke={ACCENT} strokeWidth={2} dot={spanDays <= 30} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -357,8 +357,8 @@ export default function Dashboard({ dailySummary, days, months }) {
 
           {/* DELIVERY VS PICKUP */}
           <div className="chart-card">
-            <h4 className="chart-title">Delivery vs Pickup Revenue</h4>
-            <p className="chart-sub">Side-by-side {isAggregated ? 'monthly' : 'daily'} comparison</p>
+            <h4 className="chart-title">{t.dashDeliveryVsPickupRevTitle}</h4>
+            <p className="chart-sub">{t.dashSideBySide} {isAggregated ? t.dashMonthly : t.dashDaily} {t.dashComparisonSuffix}</p>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
@@ -366,8 +366,8 @@ export default function Dashboard({ dailySummary, days, months }) {
                 <YAxis tickFormatter={v => `$${v}`} tick={{ fill: '#666', fontSize: 11 }} width={55} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ fontSize: '12px', color: '#888' }} />
-                <Bar dataKey="delivery" name="Delivery" fill={DELIVERY_COLOR} radius={[3, 3, 0, 0]} opacity={0.85} />
-                <Bar dataKey="pickup" name="Pickup" fill={PICKUP_COLOR} radius={[3, 3, 0, 0]} opacity={0.85} />
+                <Bar dataKey="delivery" name={t.chartDelivery} fill={DELIVERY_COLOR} radius={[3, 3, 0, 0]} opacity={0.85} />
+                <Bar dataKey="pickup" name={t.chartPickup} fill={PICKUP_COLOR} radius={[3, 3, 0, 0]} opacity={0.85} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -376,8 +376,8 @@ export default function Dashboard({ dailySummary, days, months }) {
           {platformData.length > 0 && (
             <div className="chart-row">
               <div className="chart-card">
-                <h4 className="chart-title">Revenue by Platform</h4>
-                <p className="chart-sub">Where your orders come from</p>
+                <h4 className="chart-title">{t.dashRevByPlatform}</h4>
+                <p className="chart-sub">{t.dashWhereFrom}</p>
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
                     <Pie data={platformData} dataKey="revenue" nameKey="name"
@@ -394,15 +394,15 @@ export default function Dashboard({ dailySummary, days, months }) {
               </div>
 
               <div className="chart-card">
-                <h4 className="chart-title">Platform Breakdown</h4>
-                <p className="chart-sub">Orders and revenue per channel</p>
+                <h4 className="chart-title">{t.dashPlatformBreakdown}</h4>
+                <p className="chart-sub">{t.dashOrdersRevPerChannel}</p>
                 <div className="platform-breakdown-list">
                   {platformData.map(p => (
                     <div key={p.name} className="pb-row">
                       <div className="pb-info">
                         <span className="pb-dot" style={{ background: PLATFORM_COLORS[p.name] || '#888' }} />
                         <span className="pb-name">{PLATFORM_LABELS[p.name] || p.name}</span>
-                        <span className="pb-count">{p.count} orders</span>
+                        <span className="pb-count">{p.count} {t.dashOrdersUnit}</span>
                       </div>
                       <div className="pb-right">
                         <span className="pb-rev">{formatCurrency(p.revenue)}</span>

@@ -11,4 +11,13 @@ export default defineConfig({
       '@styles': '/src/styles',
     }
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
+  },
 });

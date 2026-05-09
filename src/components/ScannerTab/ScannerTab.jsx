@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useOrderScan } from '@hooks/useOrderScan';
 import Scanner from '@components/Scanner/Scanner';
 import ResultsTable from '@components/ResultsTable/ResultsTable';
@@ -9,6 +10,7 @@ export default function ScannerTab() {
   const [preview, setPreview]       = useState(null);
   const [manualItems, setManualItems] = useState([]);
   const [showResults, setShowResults] = useState(false);
+  const navigate = useNavigate();
 
   const handleScan = useCallback((file) => {
     setPreview(URL.createObjectURL(file));
@@ -17,7 +19,7 @@ export default function ScannerTab() {
   }, [scan]);
 
   const handleManualEntry = () => {
-    setShowResults(true);
+    navigate('/summary');
   };
 
   const handleReset = () => {

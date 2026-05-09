@@ -48,16 +48,6 @@ export function useOrderStore() {
     });
   }, []);
 
-  const importDays = useCallback((imported) => {
-    setDays(prev => {
-      const next = { ...prev };
-      imported.forEach(d => {
-        next[d.date] = { ...d };
-      });
-      return next;
-    });
-  }, []);
-
   // Sorted array descending for display
   const dailySummary = Object.values(days)
     .map(d => ({
@@ -71,5 +61,5 @@ export function useOrderStore() {
     }))
     .sort((a, b) => b.date.localeCompare(a.date));
 
-  return { days, upsertDay, removeDay, importDays, dailySummary };
+  return { days, upsertDay, removeDay, dailySummary };
 }

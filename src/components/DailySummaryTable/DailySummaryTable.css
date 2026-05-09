@@ -99,22 +99,6 @@
 
 .platform-badge { font-size: 0.78rem; font-weight: 600; }
 
-.platform-totals-row {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.platform-total-pill {
-  font-size: 0.72rem;
-  font-weight: 600;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  padding: 0.25rem 0.65rem;
-  border-radius: 100px;
-}
-
 .notes-pill {
   background: var(--surface2);
   color: var(--text-muted);
@@ -185,6 +169,4 @@
   .day-form { padding: 1rem; }
   .day-form-grid { grid-template-columns: 1fr; gap: 1rem; }
   .day-form-row { flex-wrap: wrap; }
-  .da-intro { flex-direction: column; }
-  .platform-totals-row { gap: 0.4rem; }
 }

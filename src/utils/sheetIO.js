@@ -6,106 +6,133 @@ const PLATFORMS = {
   grubhub:   { name: 'Grubhub', commissionPct: 20, paymentProcessingPct: 3.05, flatFeePerOrder: 0.30, marketingPct: 0 },
 };
 
-function fmt(date) {
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+const BASE_COLS = [
+  { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 12 },
+  { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 14 },
+  { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 },
+];
+
+function buildSummarySheet(records, periodKey, periodLabel, exportedAt) {
+  const allCategories = [
+    ...new Set(records.flatMap(r => Object.keys(r.categories || {})))
+  ].sort();
+
+  const headers = [
+    periodLabel,
+    'Total Revenue', 'Total Orders', 'Avg/Order',
+    'Delivery Revenue', 'Delivery Orders',
+    'Pickup Revenue', 'Pickup Orders',
+    'DoorDash Revenue', 'Uber Eats Revenue', 'Grubhub Revenue',
+    'DoorDash Orders', 'Uber Eats Orders', 'Grubhub Orders',
+    ...allCategories,
+    'Notes',
+  ];
+
+  const dataRows = records.map(r => {
+    const total  = (r.deliveryRevenue || 0) + (r.pickupRevenue || 0);
+    const orders = (r.deliveryOrders  || 0) + (r.pickupOrders  || 0);
+    const cats   = r.categories || {};
+    return [
+      r[periodKey],
+      total, orders, orders > 0 ? total / orders : 0,
+      r.deliveryRevenue || 0, r.deliveryOrders || 0,
+      r.pickupRevenue   || 0, r.pickupOrders   || 0,
+      r.doordash || 0, r.ubereats || 0, r.grubhub || 0,
+      r.doordashOrders || 0, r.ubereatsOrders || 0, r.grubhubOrders || 0,
+      ...allCategories.map(c => cats[c] || 0),
+      r.notes || '',
+    ];
+  });
+
+  const sumField = (k) => records.reduce((s, r) => s + (r[k] || 0), 0);
+  const totalsRow = [
+    'TOTAL',
+    sumField('deliveryRevenue') + sumField('pickupRevenue'),
+    sumField('deliveryOrders')  + sumField('pickupOrders'),
+    '',
+    sumField('deliveryRevenue'), sumField('deliveryOrders'),
+    sumField('pickupRevenue'),   sumField('pickupOrders'),
+    sumField('doordash'), sumField('ubereats'), sumField('grubhub'),
+    sumField('doordashOrders'), sumField('ubereatsOrders'), sumField('grubhubOrders'),
+    ...allCategories.map(c =>
+      records.reduce((s, r) => s + ((r.categories || {})[c] || 0), 0)
+    ),
+    '',
+  ];
+
+  const ws = utils.aoa_to_sheet([
+    [`Exported: ${exportedAt}`],
+    [],
+    headers,
+    ...dataRows,
+    [],
+    totalsRow,
+  ]);
+  ws['!cols'] = [
+    ...BASE_COLS,
+    ...allCategories.map(() => ({ wch: 16 })),
+    { wch: 30 },
+  ];
+
+  // Force the period column to text so Excel doesn't auto-convert YYYY-MM into a date
+  for (let i = 0; i < records.length; i++) {
+    const cellAddr = utils.encode_cell({ r: 3 + i, c: 0 });
+    if (ws[cellAddr]) {
+      ws[cellAddr].t = 's';
+      ws[cellAddr].v = String(ws[cellAddr].v);
+    }
+  }
+
+  return ws;
 }
 
 /**
- * Export all app data to a multi-sheet .xlsx file
- * @param {Array} items         - order items [{name, cost, quantity, addedAt}]
- * @param {Object} itemCosts    - cost data keyed by item index
- * @param {Object} deliveryRates
- * @param {number} orderCount
- * @param {string} sessionDate  - ISO date string for this session
+ * Export daily and monthly records to a multi-sheet .xlsx file.
+ * @param {Array}  dailySummary  - day records from useOrderStore
+ * @param {Object} deliveryRates - platform rate overrides keyed by platform key
+ * @param {Object} months        - month records from useMonthlyStore (keyed by 'YYYY-MM')
  */
-export function exportToXlsx(items, itemCosts = {}, deliveryRates = {}, orderCount = 1, sessionDate = new Date().toISOString()) {
+export function exportToXlsx(dailySummary = [], deliveryRates = {}, months = {}) {
+  const sortedDaily   = [...dailySummary].sort((a, b) => a.date.localeCompare(b.date));
+  const sortedMonthly = Object.values(months || {}).sort((a, b) => a.month.localeCompare(b.month));
+
+  if (sortedDaily.length === 0 && sortedMonthly.length === 0) return;
+
   const wb = utils.book_new();
   const exportedAt = new Date().toLocaleString('en-US');
-  const sessionDateFmt = fmt(new Date(sessionDate));
 
-  // ── SHEET 1: Order Summary ─────────────────────────────
-  const orderRows = [
-    [`Order Date: ${sessionDateFmt}`, '', '', '', `Exported: ${exportedAt}`],
-    [],
-    ['Item Name', 'Source', 'Date Added', 'Unit Price', 'Quantity', 'Subtotal'],
-    ...items.map(item => [
-      item.name,
-      item.source || 'manual',
-      item.addedAt ? fmt(new Date(item.addedAt)) : sessionDateFmt,
-      item.cost,
-      item.quantity,
-      item.cost * item.quantity,
-    ]),
-    [],
-    ['', '', '', '', 'TOTAL', items.reduce((s, i) => s + i.cost * i.quantity, 0)],
-  ];
-  const wsOrder = utils.aoa_to_sheet(orderRows);
-  wsOrder['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 14 }];
-  utils.book_append_sheet(wb, wsOrder, 'Order Summary');
-
-  // ── SHEET 2: Cost Analysis ─────────────────────────────
-  const revenue = items.reduce((s, i) => s + i.cost * i.quantity, 0);
-  const costRows = [
-    [`Order Date: ${sessionDateFmt}`, '', '', '', '', '', '', '', '', '', `Exported: ${exportedAt}`],
-    [],
-    ['Item Name', 'Date Added', 'Selling Price', 'Qty', 'Ingredient Cost/unit', 'Labor Cost/unit', 'Overhead Cost/unit', 'Unit Total Cost', 'Unit Profit', 'Gross Margin %', 'Total Profit'],
-    ...items.map((item, idx) => {
-      const c = itemCosts[idx] || {};
-      const ing = parseFloat(c.ingredient) || 0;
-      const lab = parseFloat(c.labor) || 0;
-      const ovh = parseFloat(c.overhead) || 0;
-      const unitCost = ing + lab + ovh;
-      const unitProfit = item.cost - unitCost;
-      const margin = item.cost > 0 ? (unitProfit / item.cost) * 100 : 0;
-      return [
-        item.name,
-        item.addedAt ? fmt(new Date(item.addedAt)) : sessionDateFmt,
-        item.cost,
-        item.quantity,
-        ing, lab, ovh,
-        unitCost,
-        unitProfit,
-        margin / 100,
-        unitProfit * item.quantity,
-      ];
-    }),
-    [],
-    ['TOTALS', '', revenue, '',
-      '', '', '',
-      items.reduce((s, i, idx) => { const c = itemCosts[idx] || {}; return s + ((parseFloat(c.ingredient)||0)+(parseFloat(c.labor)||0)+(parseFloat(c.overhead)||0))*i.quantity; }, 0),
-      '',
-      '',
-      items.reduce((s, i, idx) => { const c = itemCosts[idx] || {}; const uc = (parseFloat(c.ingredient)||0)+(parseFloat(c.labor)||0)+(parseFloat(c.overhead)||0); return s + (i.cost - uc)*i.quantity; }, 0),
-    ],
-  ];
-  const wsCost = utils.aoa_to_sheet(costRows);
-  wsCost['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 14 }, { wch: 8 }, { wch: 20 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 14 }];
-  // Format margin column as %
-  for (let r = 4; r <= items.length + 3; r++) {
-    const cell = `J${r}`;
-    if (wsCost[cell]) wsCost[cell].z = '0.0%';
+  if (sortedDaily.length > 0) {
+    utils.book_append_sheet(wb, buildSummarySheet(sortedDaily, 'date', 'Date', exportedAt), 'Daily Summary');
   }
-  utils.book_append_sheet(wb, wsCost, 'Cost Analysis');
+  if (sortedMonthly.length > 0) {
+    utils.book_append_sheet(wb, buildSummarySheet(sortedMonthly, 'month', 'Month', exportedAt), 'Monthly Summary');
+  }
 
-  // ── SHEET 3: Delivery Fee Analysis ────────────────────
+  // Delivery Fees — aggregate from both daily and monthly platform revenue
+  const allRecords = [...sortedDaily, ...sortedMonthly];
   const deliveryRows = [
-    [`Order Date: ${sessionDateFmt}`, '', '', '', '', '', '', '', '', '', '', '', '', '', `Exported: ${exportedAt}`],
+    [`Exported: ${exportedAt}`],
     [],
-    ['Platform', 'Date', 'Gross Revenue', 'Orders', 'Commission %', 'Processing %', 'Flat Fee/Order', 'Marketing %', 'Total Commission', 'Total Processing', 'Total Flat Fees', 'Total Marketing', 'Total Deductions', 'Net Revenue', 'Effective Rate %', 'You Keep %'],
+    [
+      'Platform', 'Gross Revenue', 'Orders',
+      'Commission %', 'Processing %', 'Flat Fee/Order', 'Marketing %',
+      'Total Commission', 'Total Processing', 'Total Flat Fees', 'Total Marketing',
+      'Total Deductions', 'Net Revenue', 'Effective Rate %', 'You Keep %',
+    ],
     ...['doordash', 'ubereats', 'grubhub'].map(key => {
       const defaults = PLATFORMS[key];
       const rates = deliveryRates[key] || defaults;
-      const commAmt = revenue * (rates.commissionPct / 100);
-      const procAmt = revenue * (rates.paymentProcessingPct / 100);
-      const flatAmt = (rates.flatFeePerOrder || 0) * orderCount;
-      const mktAmt  = revenue * ((rates.marketingPct || 0) / 100);
+      const rev    = allRecords.reduce((s, r) => s + (r[key] || 0), 0);
+      const orders = allRecords.reduce((s, r) => s + (r[`${key}Orders`] || 0), 0);
+      const commAmt = rev * (rates.commissionPct / 100);
+      const procAmt = rev * (rates.paymentProcessingPct / 100);
+      const flatAmt = (rates.flatFeePerOrder || 0) * orders;
+      const mktAmt  = rev * ((rates.marketingPct || 0) / 100);
       const total   = commAmt + procAmt + flatAmt + mktAmt;
-      const net     = revenue - total;
-      const effRate = revenue > 0 ? total / revenue : 0;
+      const net     = rev - total;
+      const effRate = rev > 0 ? total / rev : 0;
       return [
-        defaults.name,
-        sessionDateFmt,
-        revenue, orderCount,
+        defaults.name, rev, orders,
         rates.commissionPct / 100,
         rates.paymentProcessingPct / 100,
         rates.flatFeePerOrder || 0,
@@ -116,8 +143,11 @@ export function exportToXlsx(items, itemCosts = {}, deliveryRates = {}, orderCou
     }),
   ];
   const wsDelivery = utils.aoa_to_sheet(deliveryRows);
-  wsDelivery['!cols'] = [{ wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 12 }];
-  ['E', 'F', 'H', 'O', 'P'].forEach(col => {
+  wsDelivery['!cols'] = [
+    { wch: 14 }, { wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 14 },
+    { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 12 },
+  ];
+  ['D', 'E', 'G', 'N', 'O'].forEach(col => {
     for (let r = 4; r <= 6; r++) {
       const cell = `${col}${r}`;
       if (wsDelivery[cell]) wsDelivery[cell].z = '0.0%';
@@ -125,13 +155,96 @@ export function exportToXlsx(items, itemCosts = {}, deliveryRates = {}, orderCou
   });
   utils.book_append_sheet(wb, wsDelivery, 'Delivery Fees');
 
-  // File name includes date
-  const dateSlug = new Date(sessionDate).toISOString().slice(0, 10);
-  writeFile(wb, `order-scanner-${dateSlug}.xlsx`);
+  const dateSlug = new Date().toISOString().slice(0, 10);
+  writeFile(wb, `tracker-export-${dateSlug}.xlsx`);
+}
+
+// Recover a YYYY-MM-DD or YYYY-MM string from a cell value that Excel may
+// have auto-converted into a serial date number or a Date object.
+function coercePeriod(raw, periodKey) {
+  if (raw == null || raw === '') return '';
+  if (typeof raw === 'string') return raw.trim();
+
+  let dateObj = null;
+  if (raw instanceof Date) {
+    dateObj = raw;
+  } else if (typeof raw === 'number') {
+    // Excel epoch: serial 1 = 1900-01-01 (with the Lotus 1-2-3 leap-year bug)
+    const ms = (raw - 25569) * 86400 * 1000;
+    dateObj = new Date(ms);
+  }
+  if (!dateObj || isNaN(dateObj.getTime())) return '';
+
+  const y  = dateObj.getUTCFullYear();
+  const m  = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+  const d  = String(dateObj.getUTCDate()).padStart(2, '0');
+  return periodKey === 'date' ? `${y}-${m}-${d}` : `${y}-${m}`;
+}
+
+function parseSummarySheet(ws, periodKey, defaultSource) {
+  if (!ws) return [];
+  const rows = utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+  const headerIdx = rows.findIndex(row => {
+    const v = String(row[0] || '').toLowerCase().trim();
+    return v === 'date' || v === 'month';
+  });
+  if (headerIdx === -1) return [];
+
+  const headers = rows[headerIdx].map(h => String(h).toLowerCase().trim());
+  const col = (exact) => headers.indexOf(exact);
+  const has = (a, b) => headers.findIndex(h => h.includes(a) && h.includes(b));
+
+  const delRevCol   = col('delivery revenue');
+  const delOrdCol   = col('delivery orders');
+  const pkRevCol    = col('pickup revenue');
+  const pkOrdCol    = col('pickup orders');
+  const totalRevCol = col('total revenue');
+  const totalOrdCol = col('total orders');
+  const ddRevCol    = has('doordash', 'revenue');
+  const ueRevCol    = has('uber', 'revenue');
+  const ghRevCol    = has('grubhub', 'revenue');
+  const ddOrdCol    = has('doordash', 'orders');
+  const ueOrdCol    = has('uber', 'orders');
+  const ghOrdCol    = has('grubhub', 'orders');
+  const notesCol    = col('notes');
+
+  const periodRegex = periodKey === 'date' ? /^\d{4}-\d{2}-\d{2}$/ : /^\d{4}-\d{2}$/;
+
+  const records = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (String(row[0] || '').trim().toUpperCase() === 'TOTAL') continue;
+
+    const period = coercePeriod(row[0], periodKey);
+    if (!period || !periodRegex.test(period)) continue;
+
+    records.push({
+      [periodKey]:     period,
+      deliveryRevenue: parseFloat(delRevCol >= 0 ? row[delRevCol] : row[totalRevCol]) || 0,
+      pickupRevenue:   parseFloat(pkRevCol  >= 0 ? row[pkRevCol]  : 0) || 0,
+      deliveryOrders:  parseInt(delOrdCol   >= 0 ? row[delOrdCol] : row[totalOrdCol]) || 0,
+      pickupOrders:    parseInt(pkOrdCol    >= 0 ? row[pkOrdCol]  : 0) || 0,
+      doordash:        parseFloat(ddRevCol  >= 0 ? row[ddRevCol]  : 0) || 0,
+      ubereats:        parseFloat(ueRevCol  >= 0 ? row[ueRevCol]  : 0) || 0,
+      grubhub:         parseFloat(ghRevCol  >= 0 ? row[ghRevCol]  : 0) || 0,
+      doordashOrders:  parseInt(ddOrdCol    >= 0 ? row[ddOrdCol]  : 0) || 0,
+      ubereatsOrders:  parseInt(ueOrdCol    >= 0 ? row[ueOrdCol]  : 0) || 0,
+      grubhubOrders:   parseInt(ghOrdCol    >= 0 ? row[ghOrdCol]  : 0) || 0,
+      notes:           notesCol >= 0 ? String(row[notesCol] || '').trim() : '',
+      categories:      {},
+      // Anything pulled from a file is always tagged 'imported' — we ignore any
+      // Source column the file may carry, since past exports wrote "Manual" there
+      // and that would re-introduce the manual badge after a round-trip.
+      source:          defaultSource || 'imported',
+    });
+  }
+  return records;
 }
 
 /**
- * Import an .xlsx file and extract order items from the Order Summary sheet
+ * Import an .xlsx file. Reads "Daily Summary" and "Monthly Summary" sheets if present.
+ * Returns { days, months } — both arrays may be empty independently, but at least one will have data.
  */
 export function importFromXlsx(file) {
   return new Promise((resolve, reject) => {
@@ -141,49 +254,32 @@ export function importFromXlsx(file) {
         const data = new Uint8Array(e.target.result);
         const wb = read(data, { type: 'array' });
 
-        const sheetName = wb.SheetNames.includes('Order Summary')
-          ? 'Order Summary'
-          : wb.SheetNames[0];
+        const dailyName = wb.SheetNames.find(n => n.toLowerCase() === 'daily summary');
+        const monthlyName = wb.SheetNames.find(n => n.toLowerCase() === 'monthly summary');
 
-        const ws = wb.Sheets[sheetName];
-        const rows = utils.sheet_to_json(ws, { header: 1, defval: '' });
+        let days = [];
+        let months = [];
 
-        // Find header row
-        const headerIdx = rows.findIndex(row =>
-          row.some(cell => typeof cell === 'string' && cell.toLowerCase().includes('item'))
-        );
-        if (headerIdx === -1) { reject(new Error('Could not find an item list in this file.')); return; }
-
-        const headers = rows[headerIdx].map(h => String(h).toLowerCase().trim());
-        const nameCol  = headers.findIndex(h => h.includes('item') || h.includes('name'));
-        const costCol  = headers.findIndex(h => h.includes('price') || (h.includes('cost') && !h.includes('ingredient') && !h.includes('labor') && !h.includes('overhead') && !h.includes('unit')) || h.includes('unit'));
-        const qtyCol   = headers.findIndex(h => h.includes('qty') || h.includes('quantity'));
-        const dateCol  = headers.findIndex(h => h.includes('date'));
-
-        const items = [];
-        for (let i = headerIdx + 1; i < rows.length; i++) {
-          const row = rows[i];
-          const name = String(row[nameCol] || '').trim();
-          const cost = parseFloat(row[costCol]);
-          const qty  = parseInt(row[qtyCol]) || 1;
-          const dateRaw = dateCol >= 0 ? row[dateCol] : null;
-
-          if (!name || name.toUpperCase() === 'TOTAL' || name.toUpperCase() === 'TOTALS') continue;
-          if (isNaN(cost)) continue;
-
-          // Parse date if present
-          let addedAt = new Date().toISOString();
-          if (dateRaw) {
-            const parsed = new Date(dateRaw);
-            if (!isNaN(parsed)) addedAt = parsed.toISOString();
-          }
-
-          items.push({ name, cost, quantity: qty, addedAt, source: 'imported' });
+        if (dailyName) {
+          days = parseSummarySheet(wb.Sheets[dailyName], 'date', 'imported');
+        }
+        if (monthlyName) {
+          // Records pulled from a file are tagged as 'imported' so the UI can
+          // distinguish them from records the user typed into the form.
+          months = parseSummarySheet(wb.Sheets[monthlyName], 'month', 'imported');
         }
 
-        if (items.length === 0) { reject(new Error('No valid items found in the file.')); return; }
-        resolve(items);
-      } catch (err) {
+        // Backwards-compat: if neither named sheet exists, try the first sheet as daily
+        if (!dailyName && !monthlyName && wb.SheetNames.length > 0) {
+          days = parseSummarySheet(wb.Sheets[wb.SheetNames[0]], 'date', 'imported');
+        }
+
+        if (days.length === 0 && months.length === 0) {
+          reject(new Error('No valid records found in the file.'));
+          return;
+        }
+        resolve({ days, months });
+      } catch {
         reject(new Error('Could not read this file. Make sure it is a valid .xlsx file.'));
       }
     };
