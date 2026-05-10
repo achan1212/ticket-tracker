@@ -115,8 +115,9 @@ export default function Dashboard({ dailySummary, days, months }) {
   };
 
   const spanDays = useMemo(() => {
+    // Inclusive day count: 2025-01-01 → 2025-12-31 should read 365, not 364.
     const diff = new Date(toDate) - new Date(fromDate);
-    return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+    return Math.max(1, Math.floor(diff / (1000 * 60 * 60 * 24)) + 1);
   }, [fromDate, toDate]);
 
   // Filter + sort daily data, then append manual monthly entries for months

@@ -27,6 +27,53 @@
   min-width: 120px;
 }
 
+/* Upload Report */
+.da-upload-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.da-upload-title {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+
+.da-upload-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.da-upload-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.da-upload-feedback {
+  font-size: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.da-upload-feedback.success {
+  color: #4ade80;
+  background: rgba(74,222,128,0.1);
+  border-color: rgba(74,222,128,0.3);
+}
+.da-upload-feedback.error {
+  color: #ff4f4f;
+  background: rgba(255,79,79,0.1);
+  border-color: rgba(255,79,79,0.3);
+}
+
 /* Platform Cards */
 .platform-list {
   display: flex;

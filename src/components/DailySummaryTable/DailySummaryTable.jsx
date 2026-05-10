@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatCurrency } from '@utils/helpers';
+import PlatformBreakdown from '@components/PlatformBreakdown/PlatformBreakdown';
 import { useLang } from '../../i18n/LangContext.jsx';
 import './DailySummaryTable.css';
 
@@ -303,6 +304,12 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
               onSave={(data) => handleEditSave(day.date, data)}
               onCancel={() => setEditingDate(null)}
             />
+          )}
+
+          {editingDate !== day.date && (
+            <div style={{ padding: '0 1.5rem' }}>
+              <PlatformBreakdown record={days[day.date]} />
+            </div>
           )}
         </div>
       ))}

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { formatCurrency } from '@utils/helpers';
+import PlatformBreakdown from '@components/PlatformBreakdown/PlatformBreakdown';
 import { useLang } from '../../i18n/LangContext.jsx';
 import './MonthlySummaryTable.css';
 
@@ -352,6 +353,9 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
 
           {expandedMonth === month.key && editingMonth !== month.key && (
             <div className="month-day-list">
+              <div style={{ padding: '0.75rem 1.5rem' }}>
+                <PlatformBreakdown record={month.manual} />
+              </div>
               {month.manual && (
                 <div className={`month-day-row ${month.manual.source === 'imported' ? 'month-imported-row' : 'month-manual-row'}`}>
                   <div className="month-day-date">

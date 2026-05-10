@@ -105,7 +105,13 @@ export default function App() {
             <Dashboard dailySummary={dailySummary} days={days} months={months} />
           )}
           {activeTab === 'delivery' && (
-            <DeliveryAnalysis days={days} dailySummary={dailySummary} onUpsertDay={upsertDay} />
+            <DeliveryAnalysis
+              days={days}
+              months={months}
+              dailySummary={dailySummary}
+              onUpsertDay={upsertDay}
+              onUpsertMonth={upsertMonth}
+            />
           )}
           {activeTab === 'analysis' && (
             <CostAnalysis items={allItems} itemCosts={itemCosts} onItemCostsChange={setItemCosts} />

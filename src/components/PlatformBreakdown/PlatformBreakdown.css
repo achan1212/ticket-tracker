@@ -1,0 +1,55 @@
+.platform-breakdowns {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.platform-breakdown-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.pbc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.pbc-platform {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.pbc-net {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.pbc-net strong { color: var(--text); }
+
+.pbc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.4rem 1rem;
+}
+
+.pbc-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  align-items: baseline;
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 0.2rem;
+}
+
+.pbc-label { color: var(--text-muted); }
+.pbc-value { font-family: var(--font-mono); font-weight: 500; }
+.pbc-bold { font-weight: 700; color: var(--text); }
+.pbc-negative { color: #ff4f4f; }

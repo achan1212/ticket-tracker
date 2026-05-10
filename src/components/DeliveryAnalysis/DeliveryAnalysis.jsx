@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { formatCurrency } from '@utils/helpers';
+import { parsePlatformReport } from '@utils/platformReportIO';
 import { useLang } from '../../i18n/LangContext.jsx';
 import './DeliveryAnalysis.css';
 
@@ -9,13 +10,16 @@ const PLATFORMS = {
   grubhub:   { name: 'Grubhub', color: '#F63440', icon: '🟠', commissionPct: 20, paymentProcessingPct: 3.05, flatFeePerOrder: 0.30, marketingPct: 0 },
 };
 
-function PlatformSalesRow({ platformKey, platform, days }) {
+function PlatformSalesRow({ platformKey, platform, days, months = {} }) {
   const { t } = useLang();
   const [rates, setRates]       = useState({ ...platform });
   const [showRates, setShowRates] = useState(false);
 
-  const totalRevenue    = Object.values(days).reduce((s, d) => s + (d[platformKey] || 0), 0);
-  const totalOrders     = Object.values(days).reduce((s, d) => s + (d[`${platformKey}Orders`] || 0), 0);
+  const sumPlatform = (collection, suffix = '') =>
+    Object.values(collection).reduce((s, r) => s + (r[`${platformKey}${suffix}`] || 0), 0);
+
+  const totalRevenue = sumPlatform(days)         + sumPlatform(months);
+  const totalOrders  = sumPlatform(days, 'Orders') + sumPlatform(months, 'Orders');
   const commissionAmt   = totalRevenue * (rates.commissionPct / 100);
   const processingAmt   = totalRevenue * (rates.paymentProcessingPct / 100);
   const flatAmt         = rates.flatFeePerOrder * totalOrders;
@@ -196,16 +200,77 @@ function DayPlatformEntry({ date, day, onUpsertDay }) {
   );
 }
 
-export default function DeliveryAnalysis({ days, dailySummary, onUpsertDay }) {
+export default function DeliveryAnalysis({ days, months = {}, dailySummary, onUpsertDay, onUpsertMonth }) {
   const { t } = useLang();
   const [activeSection, setActiveSection] = useState('entry');
+  const [uploadingPlatform, setUploadingPlatform] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState(null); // { type: 'success'|'error', msg }
+  const uploadRef = useRef(null);
 
   const sortedDates = Object.keys(days).sort((a, b) => b.localeCompare(a));
 
   const totals = {
-    doordash: Object.values(days).reduce((s, d) => s + (d.doordash || 0), 0),
-    ubereats:  Object.values(days).reduce((s, d) => s + (d.ubereats  || 0), 0),
-    grubhub:   Object.values(days).reduce((s, d) => s + (d.grubhub   || 0), 0),
+    doordash: Object.values(days).reduce((s, d) => s + (d.doordash || 0), 0)
+            + Object.values(months).reduce((s, m) => s + (m.doordash || 0), 0),
+    ubereats:  Object.values(days).reduce((s, d) => s + (d.ubereats  || 0), 0)
+            + Object.values(months).reduce((s, m) => s + (m.ubereats  || 0), 0),
+    grubhub:   Object.values(days).reduce((s, d) => s + (d.grubhub   || 0), 0)
+            + Object.values(months).reduce((s, m) => s + (m.grubhub   || 0), 0),
+  };
+
+  const triggerUpload = (platformKey) => {
+    setUploadingPlatform(platformKey);
+    setUploadStatus(null);
+    uploadRef.current.click();
+  };
+
+  const handleUpload = async (file) => {
+    if (!file || !uploadingPlatform) return;
+    const platformKey = uploadingPlatform;
+    try {
+      const { days: importedDays, months: importedMonths } = await parsePlatformReport(file);
+
+      let dayCount = 0;
+      let monthCount = 0;
+      let totalRev = 0;
+
+      Object.entries(importedDays).forEach(([date, { revenue, orders, breakdown }]) => {
+        onUpsertDay(date, {
+          [platformKey]:               revenue,
+          [`${platformKey}Orders`]:    orders,
+          ...(breakdown && { [`${platformKey}Breakdown`]: breakdown }),
+          // Preserve a manual flag if the user had already typed this day in.
+          source: days[date]?.source || 'imported',
+        });
+        dayCount++;
+        totalRev += revenue;
+      });
+
+      Object.entries(importedMonths).forEach(([month, { revenue, orders, breakdown }]) => {
+        if (!onUpsertMonth) return;
+        onUpsertMonth(month, {
+          [platformKey]:               revenue,
+          [`${platformKey}Orders`]:    orders,
+          ...(breakdown && { [`${platformKey}Breakdown`]: breakdown }),
+          source: months[month]?.source || 'imported',
+        });
+        monthCount++;
+        totalRev += revenue;
+      });
+
+      const parts = [];
+      if (dayCount > 0)   parts.push(`${dayCount} ${dayCount !== 1 ? t.daysPlural : t.days}`);
+      if (monthCount > 0) parts.push(`${monthCount} ${monthCount !== 1 ? t.monthsPlural : t.months}`);
+      setUploadStatus({
+        type: 'success',
+        msg: `✓ ${PLATFORMS[platformKey].name}: ${parts.join(' · ')} · ${formatCurrency(totalRev)}`,
+      });
+    } catch (err) {
+      setUploadStatus({ type: 'error', msg: `⚠ ${err.message}` });
+    } finally {
+      setUploadingPlatform(null);
+      uploadRef.current.value = '';
+    }
   };
 
   return (
@@ -237,6 +302,32 @@ export default function DeliveryAnalysis({ days, dailySummary, onUpsertDay }) {
             </div>
           </div>
 
+          <div className="da-upload-section">
+            <div>
+              <h4 className="da-upload-title">{t.uploadReportTitle}</h4>
+              <p className="da-upload-sub">{t.uploadReportSub}</p>
+            </div>
+            <div className="da-upload-buttons">
+              {Object.entries(PLATFORMS).map(([key, p]) => (
+                <button key={key} className="btn btn-secondary btn-sm"
+                  style={{ color: p.color, borderColor: p.color }}
+                  onClick={() => triggerUpload(key)}>
+                  {p.icon} {t.uploadReportBtn} {p.name}
+                </button>
+              ))}
+            </div>
+            {uploadStatus && (
+              <div className={`da-upload-feedback ${uploadStatus.type}`}>{uploadStatus.msg}</div>
+            )}
+            <input
+              ref={uploadRef}
+              type="file"
+              accept=".csv,.xlsx,.xls,.pdf,application/pdf"
+              style={{ display: 'none' }}
+              onChange={e => handleUpload(e.target.files[0])}
+            />
+          </div>
+
           {sortedDates.length === 0 ? (
             <div className="ca-empty">{t.daNoData}</div>
           ) : (
@@ -259,7 +350,7 @@ export default function DeliveryAnalysis({ days, dailySummary, onUpsertDay }) {
           </div>
           <div className="platform-list">
             {Object.entries(PLATFORMS).map(([key, p]) => (
-              <PlatformSalesRow key={key} platformKey={key} platform={p} days={days} />
+              <PlatformSalesRow key={key} platformKey={key} platform={p} days={days} months={months} />
             ))}
           </div>
 
@@ -279,7 +370,8 @@ export default function DeliveryAnalysis({ days, dailySummary, onUpsertDay }) {
                 <tbody>
                   {Object.entries(PLATFORMS).map(([key, p]) => {
                     const rev = totals[key];
-                    const orders = Object.values(days).reduce((s, d) => s + (d[`${key}Orders`] || 0), 0);
+                    const orders = Object.values(days).reduce((s, d) => s + (d[`${key}Orders`] || 0), 0)
+                                 + Object.values(months).reduce((s, m) => s + (m[`${key}Orders`] || 0), 0);
                     const deductions = rev * ((p.commissionPct + p.paymentProcessingPct + p.marketingPct) / 100) + p.flatFeePerOrder * orders;
                     const net = rev - deductions;
                     const keepPct = rev > 0 ? (net / rev) * 100 : 0;
