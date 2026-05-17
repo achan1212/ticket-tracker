@@ -1,0 +1,212 @@
+/* Desktop navbar — replaces the old .app-tab-bar. Hidden on mobile;
+   MobileDrawer + Hamburger take over below 640px. */
+.app-navbar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding-inline: 4rem;
+  position: relative;
+  z-index: 10;
+}
+
+.nav-group {
+  position: relative;
+}
+
+/* Trigger button — visually matches the old .app-tab-btn so the look-and-feel
+   stays consistent. */
+.nav-trigger,
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.25rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.nav-trigger:hover,
+.nav-link:hover { color: var(--text); }
+.nav-trigger.active,
+.nav-link.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.nav-caret {
+  font-size: 0.7rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+.nav-trigger[aria-expanded="true"] .nav-caret { transform: rotate(180deg); }
+
+.nav-icon { font-size: 0.9rem; }
+
+/* Dropdown panel */
+.nav-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin: 0.25rem 0 0;
+  padding: 0.35rem 0;
+  list-style: none;
+  min-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  z-index: 50;
+  animation: nav-fade-in 0.12s ease-out;
+}
+@keyframes nav-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.nav-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.55rem 0.95rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.nav-menu-item:hover,
+.nav-menu-item:focus-visible {
+  background: var(--accent-dim);
+  color: var(--text);
+  outline: none;
+}
+.nav-menu-item.active { color: var(--accent); }
+
+/* Hamburger trigger — desktop hidden, mobile-shown via media query at the
+   bottom of this file. */
+.nav-hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.nav-hamburger:hover { background: var(--surface2); }
+
+/* Mobile slide-in drawer */
+.nav-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 60;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.nav-drawer-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.nav-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(280px, 80vw);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 61;
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+.nav-drawer.open { transform: translateX(0); }
+
+.nav-drawer-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.nav-drawer-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.nav-drawer-close:hover { color: var(--text); background: var(--surface2); }
+
+.nav-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem 0;
+}
+
+.drawer-group { padding: 0.5rem 0; }
+.drawer-group + .drawer-group { border-top: 1px solid var(--border); }
+
+.drawer-group-label {
+  padding: 0.25rem 1.25rem 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.drawer-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.7rem 1.25rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.drawer-item:hover,
+.drawer-item:focus-visible {
+  background: var(--accent-dim);
+  color: var(--text);
+  outline: none;
+}
+.drawer-item.active {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+.drawer-item .nav-icon { font-size: 1.05rem; }
+
+@media (max-width: 640px) {
+  .app-navbar { display: none; }
+  .nav-hamburger { display: inline-flex; }
+}

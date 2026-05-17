@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useLang } from '../../i18n/LangContext.jsx';
 import './Scanner.css';
 
-export default function Scanner({ onScan, loading, progress, error, preview, onManualEntry }) {
+export default function Scanner({ onScan, loading, progress, error, preview, chunkIndex, chunkCount, onManualEntry }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const { t } = useLang();
@@ -36,7 +36,10 @@ export default function Scanner({ onScan, loading, progress, error, preview, onM
             <div className="progress-wrap">
               <div className="progress-bar" style={{ width: `${progress}%` }} />
             </div>
-            <p className="scan-label">{t.scanningLabel} — {progress}%</p>
+            <p className="scan-label">
+              {t.scanningLabel} — {progress}%
+              {chunkCount > 1 && chunkIndex > 0 && ` · chunk ${chunkIndex}/${chunkCount}`}
+            </p>
           </div>
         ) : preview ? (
           <div className="scan-state">

@@ -253,39 +253,7 @@ body {
   color: var(--accent-on);
 }
 
-/* App-Level Tabs */
-.app-tab-bar {
-  display: flex;
-  gap: 0;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-inline: 4rem;
-}
-.app-tab-bar::-webkit-scrollbar { display: none; }
-
-.app-tab-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.55rem 1.25rem;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.app-tab-btn:hover { color: var(--text); }
-.app-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-.app-tab-icon { font-size: 0.9rem; }
-
+/* App-level navbar styles live in src/components/Navbar/Navbar.css. */
 .app-main-tabs { padding: 2rem 4rem; align-items: stretch; }
 
 /* Source badge (manual vs imported) — used by Daily + Monthly summary cards */
@@ -442,12 +410,8 @@ body {
   .lang-toggle { margin-left: auto; }
   .lang-btn { font-size: 0.7rem; padding: 0.3rem 0.6rem; }
 
-  /* App tabs */
+  /* App main */
   .app-main-tabs { padding: 1.25rem; }
-  .app-tab-bar { padding-inline: 1.25rem; }
-  .app-tab-btn { padding: 0.45rem 0.75rem; font-size: 0.65rem; }
-  .app-tab-label { display: none; }
-  .app-tab-icon { font-size: 1.1rem; }
 }
 
 /* Tablet (641px – 900px) */
@@ -459,7 +423,7 @@ body {
 /* Wide Screen (> 1400px) */
 @media (min-width: 1528px) {
   .app-header,
-  .app-tab-bar,
+  .app-navbar,
   .app-main-tabs {
     padding-left: calc((100vw - 1400px) / 2);
     padding-right: calc((100vw - 1400px) / 2);

@@ -4,6 +4,10 @@ import { useOrderStore } from '@hooks/useOrderStore';
 import { useMonthlyStore } from '@hooks/useMonthlyStore';
 import { useTheme } from '@hooks/useTheme';
 import { useLang } from './i18n/LangContext.jsx';
+import Navbar from '@components/Navbar/Navbar.jsx';
+import Hamburger from '@components/Navbar/Hamburger.jsx';
+import MobileDrawer from '@components/Navbar/MobileDrawer.jsx';
+import { getAllTabKeys, getPathForTab, getTabFromPath } from '@components/Navbar/navConfig.js';
 import '@styles/index.css';
 
 const DailySummaryTable   = lazy(() => import('@components/DailySummaryTable/DailySummaryTable.jsx'));
@@ -13,8 +17,9 @@ const CostAnalysis        = lazy(() => import('@components/CostAnalysis/CostAnal
 const DeliveryAnalysis    = lazy(() => import('@components/DeliveryAnalysis/DeliveryAnalysis'));
 const SheetPanel          = lazy(() => import('@components/SheetPanel/SheetPanel'));
 const ScannerTab          = lazy(() => import('@components/ScannerTab/ScannerTab'));
+const FoodCostTab         = lazy(() => import('@components/FoodCostTab/FoodCostTab.jsx'));
 
-const TAB_KEYS = ['summary', 'monthly', 'dashboard', 'delivery', 'analysis', 'sheets', 'scanner'];
+const TAB_KEYS = getAllTabKeys();
 
 export default function App() {
   const { days, upsertDay, removeDay, dailySummary } = useOrderStore();
@@ -23,23 +28,27 @@ export default function App() {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const TABS = [
-    { key: 'summary',   label: t.tabSummary,   icon: '📋' },
-    { key: 'monthly',   label: t.tabMonthly,   icon: '📅' },
-    { key: 'dashboard', label: t.tabDashboard,  icon: '📊' },
-    { key: 'delivery',  label: t.tabDelivery,   icon: '🛵' },
-    { key: 'analysis',  label: t.tabAnalysis,   icon: '💰' },
-    { key: 'sheets',    label: t.tabSheets,     icon: '📄' },
-    { key: 'scanner',   label: t.tabScanner,    icon: '📷' },
-  ];
+  const resolvedTab = getTabFromPath(location.pathname);
+  const activeTab = resolvedTab && TAB_KEYS.includes(resolvedTab) ? resolvedTab : 'summary';
 
-  const pathTab = location.pathname.replace(/^\//, '') || 'summary';
-  const activeTab = TAB_KEYS.includes(pathTab) ? pathTab : 'summary';
-
+  // Redirect any non-canonical URL (legacy flat /summary, bare group /data,
+  // unknown /foo, or root /) to the breadcrumbed form for the active tab.
   useEffect(() => {
-    if (!TAB_KEYS.includes(pathTab)) navigate('/summary', { replace: true });
-  }, [pathTab, navigate]);
+    const canonical = getPathForTab(activeTab);
+    if (canonical && location.pathname !== canonical) {
+      navigate(canonical, { replace: true });
+    }
+  }, [location.pathname, activeTab, navigate]);
+
+  // Close the mobile drawer whenever the active tab changes.
+  useEffect(() => { setDrawerOpen(false); }, [activeTab]);
+
+  const handleNavigate = (tabKey) => {
+    const path = getPathForTab(tabKey);
+    if (path) navigate(path);
+  };
 
   const [itemCosts, setItemCosts] = useState({});
 
@@ -58,6 +67,11 @@ export default function App() {
           <p className="header-sub">{t.headerSub}</p>
         </div>
         <div className="header-controls">
+          <Hamburger
+            open={drawerOpen}
+            onClick={() => setDrawerOpen(o => !o)}
+            label={t.menuLabel || 'Menu'}
+          />
           <div className="theme-toggle">
             <button className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
               onClick={() => setTheme('dark')} title="Dark mode" aria-label="Dark mode">🌙</button>
@@ -73,15 +87,13 @@ export default function App() {
         </div>
       </header>
 
-      <div className="app-tab-bar">
-        {TABS.map(tab => (
-          <button key={tab.key} className={`app-tab-btn ${activeTab === tab.key ? 'active' : ''}`}
-            onClick={() => navigate(`/${tab.key}`)}>
-            <span className="app-tab-icon">{tab.icon}</span>
-            <span className="app-tab-label">{tab.label}</span>
-          </button>
-        ))}
-      </div>
+      <Navbar activeTab={activeTab} onNavigate={handleNavigate} />
+      <MobileDrawer
+        open={drawerOpen}
+        activeTab={activeTab}
+        onClose={() => setDrawerOpen(false)}
+        onNavigate={handleNavigate}
+      />
 
       <main className="app-main app-main-tabs">
         <Suspense fallback={<div className="ca-empty">Loading…</div>}>
@@ -117,6 +129,7 @@ export default function App() {
             <CostAnalysis items={allItems} itemCosts={itemCosts} onItemCostsChange={setItemCosts} />
           )}
           {activeTab === 'scanner' && <ScannerTab />}
+          {activeTab === 'foodcost' && <FoodCostTab />}
           {activeTab === 'sheets' && (
             <SheetPanel
               dailySummary={dailySummary}

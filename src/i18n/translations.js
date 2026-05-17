@@ -25,6 +25,26 @@ export const translations = {
     tabAnalysis: 'Cost Analysis',
     tabSheets: 'Google Sheets',
     tabScanner: 'Scanner',
+    tabFoodCost: 'Food Cost',
+
+    // Navbar groups
+    navData: 'Data',
+    navInsights: 'Insights',
+    menuLabel: 'Menu',
+
+    // Food cost import
+    foodCostTitle: 'Food Cost Import',
+    foodCostSub: 'Drop receipt photos, CSVs, or Excel files. Items are consolidated into one list you can edit and export.',
+    foodCostDropTitle: 'Drop receipts, CSVs, or Excel files here',
+    foodCostDropSub: 'You can select multiple files at once. Images go through OCR; spreadsheets are parsed by header.',
+    foodCostProcessing: 'Processing',
+    foodCostErrorLabel: 'Error',
+    foodCostNoItemsInFile: 'No items detected in this file.',
+    foodCostClearBtn: 'Clear all',
+    foodCostFile: 'file',
+    foodCostFiles: 'files',
+    foodCostItem: 'item',
+    foodCostItems: 'items',
 
     // Results header
     items: 'item',
@@ -291,6 +311,26 @@ export const translations = {
     tabAnalysis: '成本分析',
     tabSheets: 'Google表格',
     tabScanner: '扫描仪',
+    tabFoodCost: '食材成本',
+
+    // Navbar groups
+    navData: '数据',
+    navInsights: '分析',
+    menuLabel: '菜单',
+
+    // Food cost import
+    foodCostTitle: '食材成本导入',
+    foodCostSub: '拖入收据照片、CSV 或 Excel 文件，所有条目将合并为一个可编辑、可导出的列表。',
+    foodCostDropTitle: '拖入收据、CSV 或 Excel 文件',
+    foodCostDropSub: '可一次选择多个文件。图片将通过 OCR 识别，表格按表头自动解析。',
+    foodCostProcessing: '处理中',
+    foodCostErrorLabel: '错误',
+    foodCostNoItemsInFile: '此文件中未检测到条目。',
+    foodCostClearBtn: '全部清除',
+    foodCostFile: '个文件',
+    foodCostFiles: '个文件',
+    foodCostItem: '个条目',
+    foodCostItems: '个条目',
 
     // Results header
     items: '个项目',
@@ -557,6 +597,26 @@ export const translations = {
     tabAnalysis: 'Análisis de Costos',
     tabSheets: 'Google Sheets',
     tabScanner: 'Escáner',
+    tabFoodCost: 'Costo de Alimentos',
+
+    // Navbar groups
+    navData: 'Datos',
+    navInsights: 'Análisis',
+    menuLabel: 'Menú',
+
+    // Food cost import
+    foodCostTitle: 'Importar Costos de Alimentos',
+    foodCostSub: 'Arrastra fotos de recibos, CSV o archivos de Excel. Los artículos se consolidan en una lista editable y exportable.',
+    foodCostDropTitle: 'Arrastra recibos, CSV o archivos de Excel aquí',
+    foodCostDropSub: 'Puedes seleccionar varios archivos a la vez. Las imágenes pasan por OCR; las hojas se analizan por encabezado.',
+    foodCostProcessing: 'Procesando',
+    foodCostErrorLabel: 'Error',
+    foodCostNoItemsInFile: 'No se detectaron artículos en este archivo.',
+    foodCostClearBtn: 'Limpiar todo',
+    foodCostFile: 'archivo',
+    foodCostFiles: 'archivos',
+    foodCostItem: 'artículo',
+    foodCostItems: 'artículos',
 
     // Results header
     items: 'artículo',

@@ -192,6 +192,7 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
   const [editingMonth, setEditingMonth]   = useState(null);
   const [showAddForm, setShowAddForm]     = useState(false);
   const [addingMonth, setAddingMonth]     = useState(currentMonthISO());
+  const [filterType, setFilterType]       = useState('all');
 
   const dailyByMonth = useMemo(() => {
     const byMonth = {};
@@ -223,10 +224,17 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
       return {
         key, daily, manual, revenue, orderCount,
         deliveryRevenue, pickupRevenue,
+        deliveryOrders, pickupOrders,
         avgOrderValue: orderCount > 0 ? revenue / orderCount : 0,
       };
     });
   }, [dailyByMonth, months]);
+
+  const filteredMonths = allMonths.filter(m => {
+    if (filterType === 'delivery') return (m.deliveryOrders || 0) > 0;
+    if (filterType === 'pickup')   return (m.pickupOrders   || 0) > 0;
+    return true;
+  });
 
   const handleAddSave = (data) => {
     if (!addingMonth) return;
@@ -244,7 +252,19 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
     <div className="monthly-summary">
 
       <div className="ds-controls">
-        <div />
+        <div className="ds-filter-pills">
+          {[
+            { key: 'all',      label: t.filterAll },
+            { key: 'delivery', label: t.labelDelivery },
+            { key: 'pickup',   label: t.labelPickup },
+          ].map(f => (
+            <button key={f.key} className={`filter-pill ${filterType === f.key ? 'active' : ''}`}
+              onClick={() => setFilterType(f.key)}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         <button className="btn btn-primary btn-sm"
           onClick={() => { setAddingMonth(currentMonthISO()); setShowAddForm(true); }}>
           {t.addMonthBtn}
@@ -270,7 +290,7 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
         </div>
       )}
 
-      {!showAddForm && allMonths.length === 0 && (
+      {!showAddForm && filteredMonths.length === 0 && (
         <div className="ds-empty">
           <p>{t.emptyMonthlyPre} <strong>{t.addMonthBtn}</strong> {t.emptyMonthlySuffix}</p>
           <button className="btn btn-primary"
@@ -280,7 +300,7 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
         </div>
       )}
 
-      {allMonths.map(month => (
+      {filteredMonths.map(month => (
         <div key={month.key} className="day-card">
           <div className="day-card-header"
             onClick={() => setExpandedMonth(expandedMonth === month.key ? null : month.key)}>
