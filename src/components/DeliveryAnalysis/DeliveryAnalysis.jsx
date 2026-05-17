@@ -10,7 +10,7 @@ const PLATFORMS = {
   grubhub:   { name: 'Grubhub', color: '#F63440', icon: '🟠', commissionPct: 20, paymentProcessingPct: 3.05, flatFeePerOrder: 0.30, marketingPct: 0 },
 };
 
-function PlatformSalesRow({ platformKey, platform, days, months = {} }) {
+function PlatformSalesRow({ platformKey, platform, days, months = {}, foodCostRate = 0 }) {
   const { t } = useLang();
   const [rates, setRates]       = useState({ ...platform });
   const [showRates, setShowRates] = useState(false);
@@ -27,6 +27,12 @@ function PlatformSalesRow({ platformKey, platform, days, months = {} }) {
   const totalDeductions = commissionAmt + processingAmt + flatAmt + marketingAmt;
   const netRevenue      = totalRevenue - totalDeductions;
   const effectiveRate   = totalRevenue > 0 ? (totalDeductions / totalRevenue) * 100 : 0;
+
+  // Allocated food cost: this platform's share of total revenue × total food
+  // cost over the period. Only shown when food cost data exists.
+  const allocatedFoodCost = foodCostRate > 0 ? totalRevenue * foodCostRate : 0;
+  const netProfit         = foodCostRate > 0 ? netRevenue - allocatedFoodCost : null;
+  const profitMargin      = netProfit !== null && totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : null;
 
   const fields = [
     { key: 'commissionPct',        label: t.commissionLabel,  suffix: '%', help: t.commissionHelp },
@@ -51,6 +57,12 @@ function PlatformSalesRow({ platformKey, platform, days, months = {} }) {
               <span className="pill pill-cost">−{formatCurrency(totalDeductions)}</span>
               <span className="pill pill-net">{t.daNetLabel} {formatCurrency(netRevenue)}</span>
               <span className="pill pill-rate">{effectiveRate.toFixed(1)}{t.daTakeLabel}</span>
+              {profitMargin !== null && (
+                <span className={`pill ${profitMargin >= 15 ? 'pill-net' : profitMargin >= 5 ? 'pill-warn' : 'pill-cost'}`}
+                  title={`${t.daNetProfitLabel || 'Net profit'}: ${formatCurrency(netProfit)}`}>
+                  {t.daMarginLabel || 'Margin'} {profitMargin.toFixed(1)}%
+                </span>
+              )}
             </div>
           )}
           <span className="item-cost-chevron">{showRates ? '▲' : '▼'}</span>
@@ -92,6 +104,15 @@ function PlatformSalesRow({ platformKey, platform, days, months = {} }) {
                 <tfoot>
                   <tr className="bd-total-row"><td>{t.totalDeductions}</td><td>{effectiveRate.toFixed(1)}%</td><td className="bd-negative">−{formatCurrency(totalDeductions)}</td></tr>
                   <tr className="bd-net-row" style={{ color: platform.color }}><td colSpan="2">{t.netRevenueTo}</td><td>{formatCurrency(netRevenue)}</td></tr>
+                  {profitMargin !== null && (
+                    <>
+                      <tr><td>{t.daFoodCostAllocated || 'Food cost (allocated)'}</td><td>{(foodCostRate * 100).toFixed(1)}%</td><td className="bd-negative">−{formatCurrency(allocatedFoodCost)}</td></tr>
+                      <tr className="bd-net-row" style={{ color: profitMargin >= 5 ? platform.color : 'var(--danger)' }}>
+                        <td colSpan="2">{t.daNetProfitLabel || 'Net profit'}</td>
+                        <td>{formatCurrency(netProfit)} <span className="bd-margin-pct">({profitMargin.toFixed(1)}%)</span></td>
+                      </tr>
+                    </>
+                  )}
                 </tfoot>
               </table>
               <div className="platform-bar-wrap">
@@ -200,7 +221,7 @@ function DayPlatformEntry({ date, day, onUpsertDay }) {
   );
 }
 
-export default function DeliveryAnalysis({ days, months = {}, dailySummary, onUpsertDay, onUpsertMonth }) {
+export default function DeliveryAnalysis({ days, months = {}, dailySummary, onUpsertDay, onUpsertMonth, foodCostByDay = {} }) {
   const { t } = useLang();
   const [activeSection, setActiveSection] = useState('entry');
   const [uploadingPlatform, setUploadingPlatform] = useState(null);
@@ -217,6 +238,15 @@ export default function DeliveryAnalysis({ days, months = {}, dailySummary, onUp
     grubhub:   Object.values(days).reduce((s, d) => s + (d.grubhub   || 0), 0)
             + Object.values(months).reduce((s, m) => s + (m.grubhub   || 0), 0),
   };
+
+  // Food cost is allocated across ALL revenue channels (delivery + pickup),
+  // not just platforms. Per-platform allocation = rate × platform revenue, so
+  // each platform's "true" net margin reflects its share of kitchen cost.
+  const totalAllRevenue =
+      Object.values(days).reduce((s, d)  => s + (d.deliveryRevenue || 0) + (d.pickupRevenue || 0), 0)
+    + Object.values(months).reduce((s, m) => s + (m.deliveryRevenue || 0) + (m.pickupRevenue || 0), 0);
+  const totalFoodCost = Object.values(foodCostByDay).reduce((s, v) => s + v, 0);
+  const foodCostRate  = totalAllRevenue > 0 && totalFoodCost > 0 ? totalFoodCost / totalAllRevenue : 0;
 
   const triggerUpload = (platformKey) => {
     setUploadingPlatform(platformKey);
@@ -350,13 +380,20 @@ export default function DeliveryAnalysis({ days, months = {}, dailySummary, onUp
           </div>
           <div className="platform-list">
             {Object.entries(PLATFORMS).map(([key, p]) => (
-              <PlatformSalesRow key={key} platformKey={key} platform={p} days={days} months={months} />
+              <PlatformSalesRow key={key} platformKey={key} platform={p} days={days} months={months} foodCostRate={foodCostRate} />
             ))}
           </div>
 
           {(totals.doordash + totals.ubereats + totals.grubhub) > 0 && (
             <div className="comparison-section" style={{ marginTop: '1rem' }}>
               <h4 className="comparison-title">{t.comparisonTitle}</h4>
+              {foodCostRate > 0 && (
+                <p className="comparison-note">
+                  {t.daProfitNote || 'Food cost is allocated proportionally across all sales channels at'}{' '}
+                  <strong>{(foodCostRate * 100).toFixed(1)}%</strong>{' '}
+                  {t.daProfitNoteSuffix || 'of revenue.'}
+                </p>
+              )}
               <table className="comparison-table">
                 <thead>
                   <tr>
@@ -365,6 +402,9 @@ export default function DeliveryAnalysis({ days, months = {}, dailySummary, onUp
                     <th>{t.colEstDeductions}</th>
                     <th>{t.colEstNet}</th>
                     <th>{t.colYouKeep}</th>
+                    {foodCostRate > 0 && <th>{t.colFoodCost || 'Food Cost'}</th>}
+                    {foodCostRate > 0 && <th>{t.colNetProfit || 'Net Profit'}</th>}
+                    {foodCostRate > 0 && <th>{t.colMargin || 'Margin'}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -375,6 +415,9 @@ export default function DeliveryAnalysis({ days, months = {}, dailySummary, onUp
                     const deductions = rev * ((p.commissionPct + p.paymentProcessingPct + p.marketingPct) / 100) + p.flatFeePerOrder * orders;
                     const net = rev - deductions;
                     const keepPct = rev > 0 ? (net / rev) * 100 : 0;
+                    const allocFC = foodCostRate > 0 ? rev * foodCostRate : 0;
+                    const profit  = net - allocFC;
+                    const margin  = rev > 0 ? (profit / rev) * 100 : 0;
                     return (
                       <tr key={key}>
                         <td><span style={{ color: p.color, fontWeight: 600 }}>{p.icon} {p.name}</span></td>
@@ -382,6 +425,15 @@ export default function DeliveryAnalysis({ days, months = {}, dailySummary, onUp
                         <td className="bd-negative">−{formatCurrency(deductions)}</td>
                         <td>{formatCurrency(net)}</td>
                         <td><span className={`pill ${keepPct >= 70 ? 'pill-net' : keepPct >= 65 ? 'pill-warn' : 'pill-cost'}`}>{keepPct.toFixed(1)}%</span></td>
+                        {foodCostRate > 0 && <td className="bd-negative">−{formatCurrency(allocFC)}</td>}
+                        {foodCostRate > 0 && <td className={profit < 0 ? 'bd-negative' : ''}>{formatCurrency(profit)}</td>}
+                        {foodCostRate > 0 && (
+                          <td>
+                            <span className={`pill ${margin >= 15 ? 'pill-net' : margin >= 5 ? 'pill-warn' : 'pill-cost'}`}>
+                              {margin.toFixed(1)}%
+                            </span>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

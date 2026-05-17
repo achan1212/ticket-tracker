@@ -127,6 +127,7 @@ export default function App() {
               dailySummary={dailySummary}
               onUpsertDay={upsertDay}
               onUpsertMonth={upsertMonth}
+              foodCostByDay={foodCostByDay}
             />
           )}
           {activeTab === 'analysis' && (

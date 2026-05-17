@@ -281,6 +281,26 @@
   border-bottom: 1px solid var(--border);
 }
 
+.comparison-note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 0.65rem 1.5rem;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  line-height: 1.4;
+}
+.comparison-note strong {
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+.bd-margin-pct {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-left: 0.3rem;
+  font-weight: 400;
+}
+
 .comparison-table {
   width: 100%;
   min-width: 560px;
