@@ -129,9 +129,12 @@ export default function ResultsTable({
     })
     .filter(Boolean);
   const allItems = orderedItems.map(entry => entry.item);
-  const billableItems = allItems.filter(i => !i.isCategory);
-  const categoryItems = allItems.filter(i => i.isCategory);
-  const total = calcTotal(billableItems);
+  // isCategory: true now means "include this row" (a checked checkbox). The
+  // included rows contribute to the displayed total AND get pushed as the
+  // categories breakdown on export. Unchecked rows are excluded entirely.
+  const includedItems = allItems.filter(i => i.isCategory);
+  const excludedItems = allItems.filter(i => !i.isCategory);
+  const total = calcTotal(includedItems);
 
   // Preview the day/month aggregate that will be pushed when the user
   // confirms Export to Summary. Mirrors the math we'll actually persist.
@@ -140,32 +143,25 @@ export default function ResultsTable({
   const subtotalOf = (item) =>
     Number.isFinite(item.total) ? item.total : item.cost * item.quantity;
   const exportPreview = useMemo(() => {
-    // Build categories first — same logic regardless of mode.
+    // Included rows feed both the revenue total and the categories breakdown.
+    // Each included row becomes one entry in the day/month `categories` map
+    // and contributes its subtotal to the period's revenue.
     const cats = {};
-    for (const item of categoryItems) {
+    for (const item of includedItems) {
       const key = item.name.trim();
       if (!key) continue;
       cats[key] = Math.round(((cats[key] || 0) + subtotalOf(item)) * 100) / 100;
     }
-
-    // Revenue rule: by default revenue comes from non-category (item-level)
-    // rows so category subtotals don't double-count. But when EVERY row is
-    // flagged as a category — typical for a Sold Item Report where each row
-    // *is* a category total — fall back to summing the categories themselves
-    // so the day doesn't end up with $0 revenue.
-    const useCategoriesAsRevenue = billableItems.length === 0 && categoryItems.length > 0;
-    const revenueSource = useCategoriesAsRevenue ? categoryItems : billableItems;
-    const revenue = revenueSource.reduce((s, i) => s + subtotalOf(i), 0);
-    const orderCount = revenueSource.reduce((s, i) => s + i.quantity, 0);
+    const revenue    = includedItems.reduce((s, i) => s + subtotalOf(i), 0);
+    const orderCount = includedItems.reduce((s, i) => s + i.quantity, 0);
 
     return {
       revenue: Math.round(revenue * 100) / 100,
       orderCount,
       categories: cats,
-      revenueMode: useCategoriesAsRevenue ? 'categories' : 'items',
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [billableItems, categoryItems]);
+  }, [includedItems]);
 
   const handleFormChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -397,14 +393,17 @@ export default function ResultsTable({
   const renderRow = (entry, displayIndex) => {
     const { uid, item, type } = entry;
     const isEditing = editingUid === uid;
-    const isCategory = !!item.isCategory;
+    // `isIncluded` reflects the checkbox state: true = row is part of the
+    // total and goes into the export's categories breakdown; false = the row
+    // is excluded (dimmed + struck through visually).
+    const isIncluded = !!item.isCategory;
     const isManual = type === 'manual';
     const sourceBadgeLabel = isManual ? t.badgeManual : t.badgeScanned;
     const sourceBadgeClass = isManual ? 'item-source-badge manual' : 'item-source-badge';
     const rowClass = [
       isManual ? 'manual-row' : '',
       isEditing ? 'editing-row' : '',
-      isCategory ? 'category-row' : '',
+      isIncluded ? '' : 'excluded-row',
       draggingUid === uid ? 'dragging-row' : '',
       dragOverUid === uid ? 'drag-over' : '',
     ].filter(Boolean).join(' ');
@@ -424,12 +423,12 @@ export default function ResultsTable({
         <td className="item-name">
           <div className="name-cell">
             <span className="drag-handle" title={t.dragHandleTitle || 'Drag to reorder'} aria-hidden="true">{dragIcon}</span>
-            <label className="cat-toggle" title={t.catToggleTitle || 'Mark as category total (excluded from sum)'}>
+            <label className="cat-toggle" title={t.catToggleTitle || 'Include this row in the total'}>
               <input
                 type="checkbox"
-                checked={isCategory}
+                checked={isIncluded}
                 onChange={() => toggleCategory(uid)}
-                aria-label={t.catToggleTitle || 'Mark as category total'}
+                aria-label={t.catToggleTitle || 'Include this row in the total'}
               />
             </label>
             {isEditing ? (
@@ -444,9 +443,7 @@ export default function ResultsTable({
             ) : (
               <>
                 <span className="name-text">{item.name}</span>
-                {isCategory
-                  ? <span className="item-source-badge cat-badge">{t.categoryBadge || 'CATEGORY'}</span>
-                  : <span className={sourceBadgeClass}>{sourceBadgeLabel}</span>}
+                <span className={sourceBadgeClass}>{sourceBadgeLabel}</span>
               </>
             )}
           </div>
@@ -480,7 +477,7 @@ export default function ResultsTable({
             <span className="qty-badge">{item.quantity}×</span>
           )}
         </td>
-        <td className={`item-subtotal ${isCategory ? 'subtotal-excluded' : ''}`}>
+        <td className="item-subtotal">
           {isEditing ? editLiveSubtotal : formatCurrency(item.cost * item.quantity)}
         </td>
         <td className="item-actions">
@@ -640,11 +637,6 @@ export default function ResultsTable({
                     {t.foodCostDateAuto || 'auto'}
                   </span>
                 )}
-                {exportPreview.revenueMode === 'categories' && (
-                  <span className="export-preview-pill export-preview-hint" title={t.exportRevenueFromCategoriesTitle || 'Every row is a category — totalling them as the day revenue.'}>
-                    {t.exportRevenueFromCategoriesLabel || 'Revenue = categories sum'}
-                  </span>
-                )}
                 {exportChannel === 'none' && (
                   <span className="export-preview-pill export-preview-muted" title={t.exportChannelNoneTitle || 'Channel revenue stays at 0 for delivery and pickup; only the categories are pushed.'}>
                     {t.exportChannelNoneLabel || 'Channel skipped'}
@@ -654,7 +646,7 @@ export default function ResultsTable({
 
               {Object.keys(exportPreview.categories).length === 0 && (
                 <p className="export-summary-hint">
-                  {t.exportNoCategoriesHint || 'Tip: check the category box on any row (Sliders, Tacos, Fries, …) to break out a category total. Without any marks, only the revenue and order count are pushed.'}
+                  {t.exportNoIncludedHint || 'No rows are checked. Use the checkboxes (or Select all) to choose which rows go into the summary — checked rows contribute to revenue and become category entries.'}
                 </p>
               )}
 
@@ -744,7 +736,7 @@ export default function ResultsTable({
       )}
 
       {activeTab === 'analysis' && (
-        <CostAnalysis items={billableItems} itemCosts={itemCosts} onItemCostsChange={setItemCosts} />
+        <CostAnalysis items={includedItems} itemCosts={itemCosts} onItemCostsChange={setItemCosts} />
       )}
     </div>
   );
