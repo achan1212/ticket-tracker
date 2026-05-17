@@ -19,6 +19,7 @@ const DeliveryAnalysis    = lazy(() => import('@components/DeliveryAnalysis/Deli
 const SheetPanel          = lazy(() => import('@components/SheetPanel/SheetPanel'));
 const ScannerTab          = lazy(() => import('@components/ScannerTab/ScannerTab'));
 const FoodCostTab         = lazy(() => import('@components/FoodCostTab/FoodCostTab.jsx'));
+const MenuAnalytics       = lazy(() => import('@components/MenuAnalytics/MenuAnalytics.jsx'));
 
 const TAB_KEYS = getAllTabKeys();
 
@@ -132,6 +133,9 @@ export default function App() {
           )}
           {activeTab === 'analysis' && (
             <CostAnalysis items={allItems} itemCosts={itemCosts} onItemCostsChange={setItemCosts} />
+          )}
+          {activeTab === 'menu' && (
+            <MenuAnalytics days={days} months={months} dailySummary={dailySummary} />
           )}
           {activeTab === 'scanner' && (
             <ScannerTab

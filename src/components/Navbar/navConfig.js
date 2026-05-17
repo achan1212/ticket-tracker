@@ -25,6 +25,7 @@ export const NAV_GROUPS = [
       { key: 'dashboard', labelKey: 'tabDashboard', icon: '📊' },
       { key: 'delivery',  labelKey: 'tabDelivery',  icon: '🛵' },
       { key: 'analysis',  labelKey: 'tabAnalysis',  icon: '💰' },
+      { key: 'menu',      labelKey: 'tabMenu',      icon: '🍽️' },
     ],
   },
   {

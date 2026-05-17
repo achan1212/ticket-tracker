@@ -20,6 +20,7 @@ import './components/ScannerTab/ScannerTab.css';
 import './components/PlatformBreakdown/PlatformBreakdown.css';
 import './components/Navbar/Navbar.css';
 import './components/FoodCostTab/FoodCostTab.css';
+import './components/MenuAnalytics/MenuAnalytics.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
