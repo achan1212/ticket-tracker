@@ -5,8 +5,8 @@ import Scanner from '@components/Scanner/Scanner';
 import ResultsTable from '@components/ResultsTable/ResultsTable';
 import './ScannerTab.css';
 
-export default function ScannerTab() {
-  const { scan, results, loading, progress, error, rawText, reset, chunkIndex, chunkCount } = useOrderScan();
+export default function ScannerTab({ onUpsertDay, onUpsertMonth, days = {}, months = {} }) {
+  const { scan, results, loading, progress, error, rawText, reset, chunkIndex, chunkCount, detectedDate } = useOrderScan();
   const [preview, setPreview]       = useState(null);
   const [manualItems, setManualItems] = useState([]);
   const [showResults, setShowResults] = useState(false);
@@ -70,6 +70,11 @@ export default function ScannerTab() {
       onReset={handleReset}
       preview={preview}
       rawText={rawText}
+      detectedDate={detectedDate}
+      onUpsertDay={onUpsertDay}
+      onUpsertMonth={onUpsertMonth}
+      days={days}
+      months={months}
     />
   );
 }

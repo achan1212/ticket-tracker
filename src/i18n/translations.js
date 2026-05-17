@@ -61,6 +61,13 @@ export const translations = {
     hideRawOCR: 'Hide Raw OCR',
     viewRawOCR: 'View Raw OCR',
     exportCSV: 'Export CSV',
+    exportToSummaryBtn: 'Export to Summary',
+    exportTargetLabel: 'Send to',
+    exportChannelLabel: 'Channel',
+    exportConfirmBtn: 'Push to Summary',
+    exportSuccessPrefix: 'Exported to',
+    exportNoItemsError: 'Nothing to export yet.',
+    exportInvalidDateError: 'Pick a valid date.',
     startOver: 'Start Over',
 
     // Table
@@ -364,6 +371,13 @@ export const translations = {
     hideRawOCR: '隐藏原始OCR',
     viewRawOCR: '查看原始OCR',
     exportCSV: '导出CSV',
+    exportToSummaryBtn: '导出至汇总',
+    exportTargetLabel: '发送至',
+    exportChannelLabel: '渠道',
+    exportConfirmBtn: '推送至汇总',
+    exportSuccessPrefix: '已导出至',
+    exportNoItemsError: '当前没有可导出的条目。',
+    exportInvalidDateError: '请选择有效日期。',
     startOver: '重新开始',
 
     // Table
@@ -667,6 +681,13 @@ export const translations = {
     hideRawOCR: 'Ocultar OCR Sin Procesar',
     viewRawOCR: 'Ver OCR Sin Procesar',
     exportCSV: 'Exportar CSV',
+    exportToSummaryBtn: 'Exportar al Resumen',
+    exportTargetLabel: 'Enviar a',
+    exportChannelLabel: 'Canal',
+    exportConfirmBtn: 'Enviar al Resumen',
+    exportSuccessPrefix: 'Exportado a',
+    exportNoItemsError: 'No hay nada para exportar.',
+    exportInvalidDateError: 'Selecciona una fecha válida.',
     startOver: 'Empezar de Nuevo',
 
     // Table

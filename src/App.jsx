@@ -133,7 +133,14 @@ export default function App() {
           {activeTab === 'analysis' && (
             <CostAnalysis items={allItems} itemCosts={itemCosts} onItemCostsChange={setItemCosts} />
           )}
-          {activeTab === 'scanner' && <ScannerTab />}
+          {activeTab === 'scanner' && (
+            <ScannerTab
+              onUpsertDay={upsertDay}
+              onUpsertMonth={upsertMonth}
+              days={days}
+              months={months}
+            />
+          )}
           {activeTab === 'foodcost' && <FoodCostTab />}
           {activeTab === 'sheets' && (
             <SheetPanel

@@ -5,6 +5,10 @@
 
 import * as XLSX from 'xlsx';
 import { createWorker } from 'tesseract.js';
+import { normalizeDate, detectReceiptDate } from './dateDetect.js';
+
+// Re-export so callers that already import these from foodCostIO keep working.
+export { normalizeDate, detectReceiptDate };
 
 let _uidCounter = 0;
 function makeUid() {
@@ -32,83 +36,8 @@ function findColumn(headers, candidates) {
   return -1;
 }
 
-// Normalize any of the common receipt / spreadsheet date forms into ISO
-// YYYY-MM-DD. Returns null if the input doesn't look like a date or is
-// outside a reasonable date window (1990–2100). Excel serial numbers (e.g.
-// 45000) are handled too because xlsx surfaces them as raw numbers when the
-// cell isn't formatted.
-export function normalizeDate(input) {
-  if (input == null) return null;
-  if (input instanceof Date && !isNaN(input)) return toISO(input);
-
-  // Excel serial number (days since 1899-12-30)
-  if (typeof input === 'number' && Number.isFinite(input) && input > 20000 && input < 80000) {
-    const ms = (input - 25569) * 86400 * 1000;
-    const d = new Date(ms);
-    return isReasonable(d) ? toISO(d) : null;
-  }
-
-  const s = String(input).trim();
-  if (!s) return null;
-
-  // Already ISO-shaped
-  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if (m) {
-    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-    return isReasonable(d) ? toISO(d) : null;
-  }
-
-  // MM/DD/YYYY, M-D-YY, etc.
-  m = s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-  if (m) {
-    let year = Number(m[3]);
-    if (year < 100) year += year < 70 ? 2000 : 1900;
-    const d = new Date(year, Number(m[1]) - 1, Number(m[2]));
-    return isReasonable(d) ? toISO(d) : null;
-  }
-
-  // Mmm DD YYYY (e.g. "May 17, 2026" or "MAY 17 2026")
-  m = s.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b/i);
-  if (m) {
-    const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-    const d = new Date(Number(m[3]), months.indexOf(m[1].toLowerCase()), Number(m[2]));
-    return isReasonable(d) ? toISO(d) : null;
-  }
-
-  return null;
-}
-
-function toISO(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-function isReasonable(d) {
-  if (!d || isNaN(d.getTime())) return false;
-  const y = d.getFullYear();
-  return y >= 1990 && y <= 2100;
-}
-
-// Best-effort receipt date detection. Scans the first N OCR lines for any
-// recognizable date form; returns the first hit. Receipts almost always put
-// the date in the header.
-export function detectReceiptDate(rawText) {
-  if (!rawText) return null;
-  const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 25);
-  for (const line of lines) {
-    const iso = normalizeDate(line);
-    if (iso) return iso;
-    // Also try sub-strings — many receipts inline a date inside a longer string.
-    const numRe = /\b\d{1,4}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g;
-    const monRe = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}\b/gi;
-    for (const candidate of [...line.matchAll(numRe), ...line.matchAll(monRe)]) {
-      const got = normalizeDate(candidate[0]);
-      if (got) return got;
-    }
-  }
-  return null;
-}
+// normalizeDate + detectReceiptDate now live in src/utils/dateDetect.js
+// and are re-exported above for backward compatibility.
 
 async function readWorkbook(file) {
   const isCsv = /\.(csv|tsv)$/i.test(file.name);

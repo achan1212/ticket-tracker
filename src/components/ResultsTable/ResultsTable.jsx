@@ -6,7 +6,22 @@ import './ResultsTable.css';
 
 const emptyForm = { name: '', cost: '', quantity: '1' };
 
-export default function ResultsTable({ scannedItems, manualItems, onAddItem, onUpdateManualItem, onReset, preview, rawText }) {
+function todayISO() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+export default function ResultsTable({
+  scannedItems, manualItems,
+  onAddItem, onUpdateManualItem,
+  onReset, preview, rawText,
+  detectedDate,
+  onUpsertDay, onUpsertMonth,
+  days = {}, months = {},
+}) {
   const { t } = useLang();
   const [activeTab, setActiveTab] = useState('summary');
   const [showRaw, setShowRaw] = useState(false);
@@ -18,6 +33,19 @@ export default function ResultsTable({ scannedItems, manualItems, onAddItem, onU
   const [editingUid, setEditingUid] = useState(null);
   const [editForm, setEditForm] = useState(emptyForm);
   const [editError, setEditError] = useState('');
+
+  // Export-to-Summary state. Pre-fill the date with whatever was detected by
+  // the scanner; the user can override before committing.
+  const [showExport, setShowExport] = useState(false);
+  const [exportTarget, setExportTarget] = useState('daily'); // 'daily' | 'monthly'
+  const [exportDate, setExportDate] = useState(detectedDate || todayISO());
+  const [exportChannel, setExportChannel] = useState('pickup'); // 'pickup' | 'delivery'
+  const [exportFeedback, setExportFeedback] = useState(null);
+
+  // When OCR finishes and a date is detected, refresh the form default.
+  useEffect(() => {
+    if (detectedDate) setExportDate(detectedDate);
+  }, [detectedDate]);
   // Per-row overrides on scanned items (edits + isCategory). Stored locally so
   // we don't mutate the upstream scan results and edits survive removals.
   const [scannedEdits, setScannedEdits] = useState({});
@@ -65,7 +93,20 @@ export default function ResultsTable({ scannedItems, manualItems, onAddItem, onU
     .filter(Boolean);
   const allItems = orderedItems.map(entry => entry.item);
   const billableItems = allItems.filter(i => !i.isCategory);
+  const categoryItems = allItems.filter(i => i.isCategory);
   const total = calcTotal(billableItems);
+
+  // Preview the day/month aggregate that will be pushed when the user
+  // confirms Export to Summary. Mirrors the math we'll actually persist.
+  const exportPreview = useMemo(() => {
+    const revenue = billableItems.reduce((s, i) => s + i.cost * i.quantity, 0);
+    const orderCount = billableItems.reduce((s, i) => s + i.quantity, 0);
+    const cats = {};
+    for (const item of categoryItems) {
+      cats[item.name] = (cats[item.name] || 0) + item.cost * item.quantity;
+    }
+    return { revenue, orderCount, categories: cats };
+  }, [billableItems, categoryItems]);
 
   const handleFormChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -146,6 +187,50 @@ export default function ResultsTable({ scannedItems, manualItems, onAddItem, onU
     } else {
       onUpdateManualItem?.(info.originalIndex, { ...manualItems[info.originalIndex], isCategory: next });
     }
+  };
+
+  // Push the scanned/reviewed data into the daily or monthly summary store.
+  // Channel revenue/orders are written for the chosen channel; categories
+  // are merged into any existing categories so user-entered ones survive.
+  // Other channels and unrelated fields on the existing day/month are
+  // preserved by the upsert callbacks (which already merge by convention).
+  const handleExportToSummary = () => {
+    setExportFeedback(null);
+    if (allItems.length === 0) {
+      setExportFeedback({ type: 'error', msg: t.exportNoItemsError || 'Nothing to export yet.' });
+      return;
+    }
+    if (exportTarget === 'daily' && !onUpsertDay) return;
+    if (exportTarget === 'monthly' && !onUpsertMonth) return;
+
+    const key = exportTarget === 'daily' ? exportDate : exportDate.slice(0, 7);
+    if (!key || !/^\d{4}-\d{2}(-\d{2})?$/.test(key)) {
+      setExportFeedback({ type: 'error', msg: t.exportInvalidDateError || 'Pick a valid date.' });
+      return;
+    }
+
+    const existing = exportTarget === 'daily' ? (days[key] || {}) : (months[key] || {});
+    const channelKey       = `${exportChannel}Revenue`;
+    const channelOrdersKey = `${exportChannel}Orders`;
+    const mergedCategories = { ...(existing.categories || {}), ...exportPreview.categories };
+
+    const record = {
+      [channelKey]:        Math.round(exportPreview.revenue * 100) / 100,
+      [channelOrdersKey]:  exportPreview.orderCount,
+      categories:          mergedCategories,
+      source:              'imported',
+    };
+
+    if (exportTarget === 'daily') {
+      onUpsertDay(key, record);
+    } else {
+      onUpsertMonth(key, record);
+    }
+
+    setExportFeedback({
+      type: 'success',
+      msg: `${t.exportSuccessPrefix || 'Exported to'} ${exportTarget === 'daily' ? (t.tabSummary || 'Daily Summary') : (t.tabMonthly || 'Monthly Summary')} (${key})`,
+    });
   };
 
   // Drag-and-drop reordering. Native HTML5 D&D — no extra dep. Whole row is
@@ -337,6 +422,15 @@ export default function ResultsTable({ scannedItems, manualItems, onAddItem, onU
               {showRaw ? t.hideRawOCR : t.viewRawOCR}
             </button>
           )}
+          {activeTab === 'summary' && (onUpsertDay || onUpsertMonth) && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => { setShowExport(v => !v); setExportFeedback(null); }}
+              disabled={allItems.length === 0}
+            >
+              {t.exportToSummaryBtn || 'Export to Summary'}
+            </button>
+          )}
           {activeTab === 'summary' && (
             <button className="btn btn-secondary" onClick={() => exportToCSV(allItems)}>{t.exportCSV}</button>
           )}
@@ -356,6 +450,89 @@ export default function ResultsTable({ scannedItems, manualItems, onAddItem, onU
         <>
           {showRaw && rawText && (
             <div className="raw-text"><p className="raw-label">{t.rawOCRLabel}</p><pre>{rawText}</pre></div>
+          )}
+
+          {showExport && (
+            <div className="export-summary-panel">
+              <div className="export-summary-row">
+                <div className="export-summary-field">
+                  <label className="target-label">{t.exportTargetLabel || 'Send to'}</label>
+                  <div className="export-target-pills">
+                    <button
+                      type="button"
+                      className={`filter-pill ${exportTarget === 'daily' ? 'active' : ''}`}
+                      onClick={() => setExportTarget('daily')}
+                    >{t.tabSummary || 'Daily'}</button>
+                    <button
+                      type="button"
+                      className={`filter-pill ${exportTarget === 'monthly' ? 'active' : ''}`}
+                      onClick={() => setExportTarget('monthly')}
+                    >{t.tabMonthly || 'Monthly'}</button>
+                  </div>
+                </div>
+
+                <div className="export-summary-field">
+                  <label className="target-label">
+                    {exportTarget === 'daily' ? (t.colDate || 'Date') : (t.labelMonth || 'Month')}
+                  </label>
+                  <input
+                    type={exportTarget === 'daily' ? 'date' : 'month'}
+                    className="form-input"
+                    value={exportTarget === 'daily' ? exportDate : exportDate.slice(0, 7)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setExportDate(exportTarget === 'daily' ? v : `${v}-01`);
+                    }}
+                    onClick={(e) => e.currentTarget.showPicker?.()}
+                  />
+                </div>
+
+                <div className="export-summary-field">
+                  <label className="target-label">{t.exportChannelLabel || 'Channel'}</label>
+                  <div className="export-target-pills">
+                    <button
+                      type="button"
+                      className={`filter-pill ${exportChannel === 'pickup' ? 'active' : ''}`}
+                      onClick={() => setExportChannel('pickup')}
+                    >{t.labelPickup || 'Pickup'}</button>
+                    <button
+                      type="button"
+                      className={`filter-pill ${exportChannel === 'delivery' ? 'active' : ''}`}
+                      onClick={() => setExportChannel('delivery')}
+                    >{t.labelDelivery || 'Delivery'}</button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="export-summary-preview">
+                <span className="export-preview-pill"><strong>{exportPreview.orderCount}</strong> {t.labelOrders || 'orders'}</span>
+                <span className="export-preview-pill"><strong>{formatCurrency(exportPreview.revenue)}</strong> {t.labelRevenue || 'revenue'}</span>
+                <span className="export-preview-pill">
+                  <strong>{Object.keys(exportPreview.categories).length}</strong>{' '}
+                  {t.categoriesBadge || 'categories'}
+                </span>
+                {detectedDate && exportDate === detectedDate && (
+                  <span className="export-preview-pill export-preview-auto">
+                    {t.foodCostDateAuto || 'auto'}
+                  </span>
+                )}
+              </div>
+
+              {exportFeedback && (
+                <div className={`export-feedback export-feedback-${exportFeedback.type}`}>
+                  {exportFeedback.msg}
+                </div>
+              )}
+
+              <div className="export-summary-actions">
+                <button className="btn btn-ghost" onClick={() => { setShowExport(false); setExportFeedback(null); }}>
+                  {t.cancelBtn || 'Cancel'}
+                </button>
+                <button className="btn btn-primary" onClick={handleExportToSummary}>
+                  {t.exportConfirmBtn || 'Push to Summary'}
+                </button>
+              </div>
+            </div>
           )}
           <div className="results-body">
             {preview && (

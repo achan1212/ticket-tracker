@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { createWorker } from 'tesseract.js';
+import { detectReceiptDate } from '../utils/dateDetect.js';
 
 // Stable id for each item — drives drag-and-drop ordering and edit/remove
 // lookups in ResultsTable. Doesn't need to be cryptographically random,
@@ -290,6 +291,7 @@ export function useOrderScan() {
   const [rawText, setRawText] = useState('');
   const [chunkIndex, setChunkIndex] = useState(0);
   const [chunkCount, setChunkCount] = useState(0);
+  const [detectedDate, setDetectedDate] = useState(null);
 
   const scan = useCallback(async (file) => {
     setLoading(true);
@@ -299,6 +301,7 @@ export function useOrderScan() {
     setRawText('');
     setChunkIndex(0);
     setChunkCount(0);
+    setDetectedDate(null);
 
     let currentChunk = 0;
     let totalChunks = 1;
@@ -347,6 +350,7 @@ export function useOrderScan() {
       await worker.terminate();
 
       setRawText(combinedText);
+      setDetectedDate(detectReceiptDate(combinedText));
       const items = parseOrderText(combinedText);
 
       if (items.length === 0) {
@@ -369,7 +373,8 @@ export function useOrderScan() {
     setProgress(0);
     setChunkIndex(0);
     setChunkCount(0);
+    setDetectedDate(null);
   }, []);
 
-  return { scan, results, loading, progress, error, rawText, reset, chunkIndex, chunkCount };
+  return { scan, results, loading, progress, error, rawText, reset, chunkIndex, chunkCount, detectedDate };
 }
