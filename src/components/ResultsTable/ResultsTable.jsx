@@ -680,7 +680,7 @@ export default function ResultsTable({
               </div>
             </div>
           )}
-          <div className="results-body">
+          <div className={`results-body ${preview ? '' : 'no-preview'}`}>
             {preview && (
               <div className="preview-panel">
                 <p className="preview-label">{t.badgeScanned}</p>
