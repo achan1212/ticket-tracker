@@ -690,7 +690,27 @@ export default function ResultsTable({
             <div className="table-panel">
               <table className="order-table">
                 <thead>
-                  <tr><th>{t.colItem}</th><th>{t.colUnitCost}</th><th>{t.colQty}</th><th>{t.colSubtotal}</th><th></th></tr>
+                  <tr>
+                    <th>
+                      <div className="th-item-with-toggle">
+                        <label className="cat-toggle" title={t.selectAllToggleTitle || 'Toggle all rows'}>
+                          <input
+                            type="checkbox"
+                            ref={(el) => { if (el) el.indeterminate = allCategoryState === 'some'; }}
+                            checked={allCategoryState === 'all'}
+                            onChange={() => setAllCategories(allCategoryState !== 'all')}
+                            aria-label={t.selectAllToggleTitle || 'Toggle all rows'}
+                            disabled={allItems.length === 0}
+                          />
+                        </label>
+                        <span>{t.colItem}</span>
+                      </div>
+                    </th>
+                    <th>{t.colUnitCost}</th>
+                    <th>{t.colQty}</th>
+                    <th>{t.colSubtotal}</th>
+                    <th></th>
+                  </tr>
                 </thead>
                 <tbody>
                   {orderedItems.map((entry, i) => renderRow(entry, i))}
