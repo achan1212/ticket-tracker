@@ -17,6 +17,7 @@ const NAME_HEADERS = ['item', 'description', 'product', 'name', 'sku', 'goods'];
 const COST_HEADERS = ['total', 'amount', 'cost', 'price', 'subtotal', 'extended', 'line total', 'ext price'];
 const QTY_HEADERS  = ['quantity', 'qty', 'count', 'units', 'pack'];
 const UNIT_COST_HEADERS = ['unit cost', 'unit price', 'unitcost', 'unitprice', 'price each', 'each'];
+const DATE_HEADERS = ['date', 'invoice date', 'order date', 'transaction date', 'posted', 'posted date'];
 
 function findColumn(headers, candidates) {
   const lower = headers.map(h => String(h ?? '').toLowerCase().trim());
@@ -29,6 +30,84 @@ function findColumn(headers, candidates) {
     if (candidates.some(c => lower[i] && lower[i].includes(c))) return i;
   }
   return -1;
+}
+
+// Normalize any of the common receipt / spreadsheet date forms into ISO
+// YYYY-MM-DD. Returns null if the input doesn't look like a date or is
+// outside a reasonable date window (1990–2100). Excel serial numbers (e.g.
+// 45000) are handled too because xlsx surfaces them as raw numbers when the
+// cell isn't formatted.
+export function normalizeDate(input) {
+  if (input == null) return null;
+  if (input instanceof Date && !isNaN(input)) return toISO(input);
+
+  // Excel serial number (days since 1899-12-30)
+  if (typeof input === 'number' && Number.isFinite(input) && input > 20000 && input < 80000) {
+    const ms = (input - 25569) * 86400 * 1000;
+    const d = new Date(ms);
+    return isReasonable(d) ? toISO(d) : null;
+  }
+
+  const s = String(input).trim();
+  if (!s) return null;
+
+  // Already ISO-shaped
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) {
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return isReasonable(d) ? toISO(d) : null;
+  }
+
+  // MM/DD/YYYY, M-D-YY, etc.
+  m = s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if (m) {
+    let year = Number(m[3]);
+    if (year < 100) year += year < 70 ? 2000 : 1900;
+    const d = new Date(year, Number(m[1]) - 1, Number(m[2]));
+    return isReasonable(d) ? toISO(d) : null;
+  }
+
+  // Mmm DD YYYY (e.g. "May 17, 2026" or "MAY 17 2026")
+  m = s.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b/i);
+  if (m) {
+    const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+    const d = new Date(Number(m[3]), months.indexOf(m[1].toLowerCase()), Number(m[2]));
+    return isReasonable(d) ? toISO(d) : null;
+  }
+
+  return null;
+}
+
+function toISO(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function isReasonable(d) {
+  if (!d || isNaN(d.getTime())) return false;
+  const y = d.getFullYear();
+  return y >= 1990 && y <= 2100;
+}
+
+// Best-effort receipt date detection. Scans the first N OCR lines for any
+// recognizable date form; returns the first hit. Receipts almost always put
+// the date in the header.
+export function detectReceiptDate(rawText) {
+  if (!rawText) return null;
+  const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 25);
+  for (const line of lines) {
+    const iso = normalizeDate(line);
+    if (iso) return iso;
+    // Also try sub-strings — many receipts inline a date inside a longer string.
+    const numRe = /\b\d{1,4}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g;
+    const monRe = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}\b/gi;
+    for (const candidate of [...line.matchAll(numRe), ...line.matchAll(monRe)]) {
+      const got = normalizeDate(candidate[0]);
+      if (got) return got;
+    }
+  }
+  return null;
 }
 
 async function readWorkbook(file) {
@@ -48,6 +127,7 @@ function parseSpreadsheetRows(rows, sourceFile) {
   let costCol = -1;
   let unitCol = -1;
   let qtyCol  = -1;
+  let dateCol = -1;
 
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
     const r = rows[i];
@@ -60,12 +140,33 @@ function parseSpreadsheetRows(rows, sourceFile) {
       costCol = c;
       unitCol = u;
       qtyCol  = findColumn(r, QTY_HEADERS);
+      dateCol = findColumn(r, DATE_HEADERS);
       break;
     }
   }
 
   if (headerIdx === -1) {
     throw new Error('Could not detect "Item" and "Cost/Price" columns in the spreadsheet headers.');
+  }
+
+  // Try to surface a single representative date for the whole upload: scan
+  // for the first non-empty value in the date column (if any), then for any
+  // header-area cell that looks like a date.
+  let detectedDate = null;
+  if (dateCol >= 0) {
+    for (let i = headerIdx + 1; i < Math.min(rows.length, headerIdx + 30); i++) {
+      const iso = normalizeDate(rows[i]?.[dateCol]);
+      if (iso) { detectedDate = iso; break; }
+    }
+  }
+  if (!detectedDate) {
+    for (let i = 0; i < Math.min(rows.length, 10); i++) {
+      for (const cell of rows[i] || []) {
+        const iso = normalizeDate(cell);
+        if (iso) { detectedDate = iso; break; }
+      }
+      if (detectedDate) break;
+    }
   }
 
   const items = [];
@@ -103,14 +204,14 @@ function parseSpreadsheetRows(rows, sourceFile) {
       sourceFile,
     });
   }
-  return items;
+  return { items, detectedDate };
 }
 
 async function parseSpreadsheet(file) {
   const wb = await readWorkbook(file);
   const sheet = wb.Sheets[wb.SheetNames[0]];
   if (!sheet) throw new Error('Spreadsheet has no sheets.');
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: true });
   return parseSpreadsheetRows(rows, file.name);
 }
 
@@ -179,18 +280,20 @@ async function parseImage(file, onProgress) {
   return { text, items: parseReceiptText(text, file.name) };
 }
 
-// Public API. Returns { fileName, items, rawText? }. Throws on unsupported
-// file type or unparseable spreadsheet headers.
+// Public API. Returns { fileName, items, detectedDate?, rawText? }. Throws on
+// unsupported file type or unparseable spreadsheet headers.
+//   detectedDate: ISO YYYY-MM-DD parsed from OCR text or a date column. The
+//   FoodCostTab UI uses it as the default for its per-file date picker.
 export async function parseFoodCostFile(file, onProgress) {
   const lower = file.name.toLowerCase();
 
   if (file.type.startsWith('image/')) {
     const { text, items } = await parseImage(file, onProgress);
-    return { fileName: file.name, items, rawText: text };
+    return { fileName: file.name, items, detectedDate: detectReceiptDate(text), rawText: text };
   }
   if (lower.endsWith('.csv') || lower.endsWith('.tsv') || lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
-    const items = await parseSpreadsheet(file);
-    return { fileName: file.name, items };
+    const { items, detectedDate } = await parseSpreadsheet(file);
+    return { fileName: file.name, items, detectedDate };
   }
   throw new Error(`Unsupported file type: ${file.name}`);
 }

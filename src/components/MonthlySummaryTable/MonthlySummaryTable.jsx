@@ -186,7 +186,7 @@ function MonthForm({ initial, onSave, onCancel }) {
   );
 }
 
-export default function MonthlySummaryTable({ dailySummary, months, onUpsertMonth, onRemoveMonth }) {
+export default function MonthlySummaryTable({ dailySummary, months, onUpsertMonth, onRemoveMonth, foodCostByMonth = {} }) {
   const { t } = useLang();
   const [expandedMonth, setExpandedMonth] = useState(null);
   const [editingMonth, setEditingMonth]   = useState(null);
@@ -345,6 +345,18 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
                   {month.orderCount > 0 ? formatCurrency(month.avgOrderValue) : '—'}
                 </span>
               </div>
+              {(() => {
+                const fc = foodCostByMonth[month.key];
+                if (!fc) return null;
+                const pct = month.revenue > 0 ? (fc / month.revenue) * 100 : null;
+                const tone = pct == null ? '' : pct > 35 ? ' fc-high' : pct < 25 ? ' fc-low' : '';
+                return (
+                  <div className={`day-stat day-stat-fc${tone}`} title={`${t.foodCostStatTitle || 'Food cost'}: ${formatCurrency(fc)}`}>
+                    <span className="day-stat-label">{t.foodCostStatLabel || 'Food %'}</span>
+                    <span className="day-stat-value">{pct == null ? formatCurrency(fc) : `${pct.toFixed(1)}%`}</span>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="day-actions">

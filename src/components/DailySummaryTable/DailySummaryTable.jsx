@@ -178,7 +178,7 @@ function DayForm({ initial, onSave, onCancel }) {
   );
 }
 
-export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onRemoveDay }) {
+export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onRemoveDay, foodCostByDay = {} }) {
   const { t } = useLang();
   const [editingDate, setEditingDate] = useState(null);
   const [addingDate, setAddingDate]   = useState('');
@@ -289,6 +289,19 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
                 <span className="day-stat-label">{t.labelAvg}</span>
                 <span className="day-stat-value">{day.orderCount > 0 ? formatCurrency(day.avgOrderValue) : '—'}</span>
               </div>
+              {(() => {
+                const fc = foodCostByDay[day.date];
+                if (!fc) return null;
+                const pct = day.revenue > 0 ? (fc / day.revenue) * 100 : null;
+                // Industry benchmark: 28–32 % is healthy for full-service casual.
+                const tone = pct == null ? '' : pct > 35 ? ' fc-high' : pct < 25 ? ' fc-low' : '';
+                return (
+                  <div className={`day-stat day-stat-fc${tone}`} title={`${t.foodCostStatTitle || 'Food cost'}: ${formatCurrency(fc)}`}>
+                    <span className="day-stat-label">{t.foodCostStatLabel || 'Food %'}</span>
+                    <span className="day-stat-value">{pct == null ? formatCurrency(fc) : `${pct.toFixed(1)}%`}</span>
+                  </div>
+                );
+              })()}
             </div>
             <div className="day-actions">
               <button className="btn btn-ghost btn-sm"

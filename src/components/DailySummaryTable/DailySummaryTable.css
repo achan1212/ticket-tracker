@@ -78,6 +78,13 @@
 .day-stat-label { font-size: 0.6rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }
 .day-stat-value { font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; }
 
+/* Food cost % stat — accent by default, red when over the 35% benchmark,
+   muted when under 25% (often signals incomplete cost imports, not a great
+   margin, so visually de-emphasized rather than greened up). */
+.day-stat-fc .day-stat-value { color: var(--accent); }
+.day-stat-fc.fc-high .day-stat-value { color: var(--danger); }
+.day-stat-fc.fc-low  .day-stat-value { color: var(--text-muted); }
+
 .day-actions { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
 .day-chevron { font-size: 0.6rem; color: var(--text-muted); }
 

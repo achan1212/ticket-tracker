@@ -2,6 +2,7 @@ import { useEffect, useState, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useOrderStore } from '@hooks/useOrderStore';
 import { useMonthlyStore } from '@hooks/useMonthlyStore';
+import { useFoodCostStore } from '@hooks/useFoodCostStore';
 import { useTheme } from '@hooks/useTheme';
 import { useLang } from './i18n/LangContext.jsx';
 import Navbar from '@components/Navbar/Navbar.jsx';
@@ -24,6 +25,7 @@ const TAB_KEYS = getAllTabKeys();
 export default function App() {
   const { days, upsertDay, removeDay, dailySummary } = useOrderStore();
   const { months, upsertMonth, removeMonth } = useMonthlyStore();
+  const { foodCostByDay, foodCostByMonth } = useFoodCostStore();
   const { lang, setLang, LANGUAGES, t } = useLang();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
@@ -103,6 +105,7 @@ export default function App() {
               days={days}
               onUpsertDay={upsertDay}
               onRemoveDay={removeDay}
+              foodCostByDay={foodCostByDay}
             />
           )}
           {activeTab === 'monthly' && (
@@ -111,6 +114,7 @@ export default function App() {
               months={months}
               onUpsertMonth={upsertMonth}
               onRemoveMonth={removeMonth}
+              foodCostByMonth={foodCostByMonth}
             />
           )}
           {activeTab === 'dashboard' && (

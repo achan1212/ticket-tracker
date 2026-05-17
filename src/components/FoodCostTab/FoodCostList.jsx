@@ -4,7 +4,7 @@ import { formatCurrency } from '@utils/helpers';
 
 const emptyEdit = { name: '', cost: '', quantity: '' };
 
-export default function FoodCostList({ fileGroups, onRemoveGroup, onUpdateItems }) {
+export default function FoodCostList({ fileGroups, onRemoveGroup, onUpdateItems, onSetGroupDate }) {
   const { t } = useLang();
   const [editingKey, setEditingKey] = useState(null); // `${groupId}:${uid}`
   const [editForm, setEditForm] = useState(emptyEdit);
@@ -67,11 +67,30 @@ export default function FoodCostList({ fileGroups, onRemoveGroup, onUpdateItems 
                   </span>
                 )}
               </div>
-              <button
-                className="btn-remove"
-                title={t.removeBtn || 'Remove'}
-                onClick={() => onRemoveGroup(group.id)}
-              >×</button>
+              <div className="fc-group-actions">
+                {group.status === 'done' && (
+                  <label className="fc-date-pick" title={t.foodCostDateTitle || 'Date this purchase counts toward'}>
+                    <span className="fc-date-label">{t.foodCostDateLabel || 'Date'}</span>
+                    <input
+                      type="date"
+                      className="form-input fc-date-input"
+                      value={group.date || ''}
+                      onChange={(e) => onSetGroupDate(group.id, e.target.value)}
+                      onClick={(e) => e.currentTarget.showPicker?.()}
+                    />
+                    {group.detectedDate && group.date === group.detectedDate && (
+                      <span className="fc-date-auto" title={t.foodCostDateAutoTitle || 'Detected from the file'}>
+                        {t.foodCostDateAuto || 'auto'}
+                      </span>
+                    )}
+                  </label>
+                )}
+                <button
+                  className="btn-remove"
+                  title={t.removeBtn || 'Remove'}
+                  onClick={() => onRemoveGroup(group.id)}
+                >×</button>
+              </div>
             </header>
 
             {group.status === 'done' && group.items.length === 0 && (

@@ -144,6 +144,40 @@
   color: var(--text-muted);
 }
 
+.fc-group-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+.fc-date-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+.fc-date-label { text-transform: uppercase; }
+.fc-date-input {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  padding: 0.25rem 0.45rem;
+  min-width: 130px;
+  background: var(--surface);
+}
+.fc-date-auto {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid rgba(232,255,71,0.25);
+}
+
 /* Item table inside a group */
 .fc-table {
   width: 100%;

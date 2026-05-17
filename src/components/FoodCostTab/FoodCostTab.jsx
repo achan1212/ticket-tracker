@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLang } from '../../i18n/LangContext.jsx';
 import { parseFoodCostFile, flattenForExport } from '@utils/foodCostIO';
-import { exportToCSV, formatCurrency } from '@utils/helpers';
+import { formatCurrency } from '@utils/helpers';
+import { useFoodCostStore } from '@hooks/useFoodCostStore';
 import FoodCostList from './FoodCostList.jsx';
 import './FoodCostTab.css';
 
@@ -10,46 +11,88 @@ function makeFileId() {
   return `up-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
+function todayISO() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export default function FoodCostTab() {
   const { t } = useLang();
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
-  const [fileGroups, setFileGroups] = useState([]);
-  // { id, name, status: 'processing'|'done'|'error', items, error?, progress }
+  const {
+    groups: fileGroups,
+    upsertGroup,
+    patchGroup,
+    removeGroup,
+    updateItems,
+    setGroupDate,
+    clearAll,
+  } = useFoodCostStore();
 
   const acceptString = 'image/*,.csv,.tsv,.xlsx,.xls';
 
-  const processOne = async (id, file) => {
+  // Pending File handles can't be serialized into localStorage, so they're
+  // kept in a ref keyed by group id and consumed once during processing.
+  const pendingFiles = useRef(new Map());
+
+  // If a tab reload happens mid-upload, any group still in 'processing' has
+  // lost its File handle. Surface that as a recoverable error so the user
+  // knows to re-upload rather than staring at a dead spinner.
+  useEffect(() => {
+    const stuck = fileGroups.filter(g => g.status === 'processing' && !pendingFiles.current.has(g.id));
+    for (const g of stuck) {
+      patchGroup(g.id, { status: 'error', error: t.foodCostInterruptedError || 'Upload interrupted — re-upload this file.' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const processOne = async (id) => {
+    const file = pendingFiles.current.get(id);
+    if (!file) return;
     try {
-      const { fileName, items } = await parseFoodCostFile(file, (p) => {
-        setFileGroups(prev => prev.map(g => g.id === id ? { ...g, progress: p } : g));
+      const { fileName, items, detectedDate } = await parseFoodCostFile(file, (p) => {
+        patchGroup(id, { progress: p });
       });
-      setFileGroups(prev => prev.map(g => g.id === id
-        ? { ...g, status: 'done', items, name: fileName, progress: 100 }
-        : g));
+      patchGroup(id, {
+        status: 'done',
+        items,
+        name: fileName,
+        progress: 100,
+        detectedDate: detectedDate || null,
+        date: detectedDate || todayISO(),
+      });
     } catch (err) {
-      setFileGroups(prev => prev.map(g => g.id === id
-        ? { ...g, status: 'error', error: err.message || String(err) }
-        : g));
+      patchGroup(id, { status: 'error', error: err.message || String(err) });
+    } finally {
+      pendingFiles.current.delete(id);
     }
   };
 
   const handleFiles = (fileList) => {
     const files = Array.from(fileList || []);
     if (files.length === 0) return;
-    const queued = files.map(f => ({
-      id: makeFileId(),
-      name: f.name,
-      status: 'processing',
-      items: [],
-      progress: 0,
-      _file: f,
-    }));
-    setFileGroups(prev => [...prev, ...queued]);
+    const queued = files.map(f => {
+      const id = makeFileId();
+      pendingFiles.current.set(id, f);
+      return {
+        id,
+        name: f.name,
+        status: 'processing',
+        items: [],
+        progress: 0,
+        date: null,
+        importedAt: new Date().toISOString(),
+      };
+    });
+    for (const g of queued) upsertGroup(g);
     // Process serially to avoid hammering the device with N parallel Tesseract
     // workers. Spreadsheets resolve instantly; only images take measurable time.
     (async () => {
-      for (const q of queued) await processOne(q.id, q._file);
+      for (const q of queued) await processOne(q.id);
     })();
   };
 
@@ -59,15 +102,13 @@ export default function FoodCostTab() {
     handleFiles(e.dataTransfer.files);
   };
 
-  const removeFileGroup = (id) => {
-    setFileGroups(prev => prev.filter(g => g.id !== id));
+  const handleClearAll = () => {
+    // Safety against accidentally nuking persisted data — confirm because the
+    // food cost store now lives across reloads.
+    if (fileGroups.length === 0) return;
+    const confirmed = window.confirm(t.foodCostClearConfirm || 'Clear all food cost imports? This cannot be undone.');
+    if (confirmed) clearAll();
   };
-
-  const updateItems = (id, items) => {
-    setFileGroups(prev => prev.map(g => g.id === id ? { ...g, items } : g));
-  };
-
-  const clearAll = () => setFileGroups([]);
 
   const doneGroups = fileGroups.filter(g => g.status === 'done');
   const totalItems = doneGroups.reduce((s, g) => s + g.items.length, 0);
@@ -105,7 +146,7 @@ export default function FoodCostTab() {
             <button className="btn btn-secondary" onClick={handleExport} disabled={totalItems === 0}>
               {t.exportCSV || 'Export CSV'}
             </button>
-            <button className="btn btn-ghost" onClick={clearAll}>
+            <button className="btn btn-ghost" onClick={handleClearAll}>
               {t.foodCostClearBtn || 'Clear all'}
             </button>
           </div>
@@ -158,8 +199,9 @@ export default function FoodCostTab() {
 
           <FoodCostList
             fileGroups={fileGroups}
-            onRemoveGroup={removeFileGroup}
+            onRemoveGroup={removeGroup}
             onUpdateItems={updateItems}
+            onSetGroupDate={setGroupDate}
           />
         </>
       )}
