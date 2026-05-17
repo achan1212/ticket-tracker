@@ -39,7 +39,11 @@ export default function ResultsTable({
   const [showExport, setShowExport] = useState(false);
   const [exportTarget, setExportTarget] = useState('daily'); // 'daily' | 'monthly'
   const [exportDate, setExportDate] = useState(detectedDate || todayISO());
-  const [exportChannel, setExportChannel] = useState('pickup'); // 'pickup' | 'delivery'
+  // Channel is optional. 'none' = don't bucket revenue into delivery/pickup;
+  // only the categories are persisted. The day record's deliveryRevenue and
+  // pickupRevenue fields keep their default 0, which downstream pipelines
+  // (revenue rollups, food-cost %, platform analysis) tolerate as missing.
+  const [exportChannel, setExportChannel] = useState('none'); // 'none' | 'pickup' | 'delivery'
   const [exportFeedback, setExportFeedback] = useState(null);
 
   // When OCR finishes and a date is detected, refresh the form default.
@@ -260,16 +264,19 @@ export default function ResultsTable({
     }
 
     const existing = exportTarget === 'daily' ? (days[key] || {}) : (months[key] || {});
-    const channelKey       = `${exportChannel}Revenue`;
-    const channelOrdersKey = `${exportChannel}Orders`;
     const mergedCategories = { ...(existing.categories || {}), ...exportPreview.categories };
 
+    // Channel is optional. When 'none', skip the channel-specific fields so
+    // any existing values (e.g. a previously-entered pickup total for that
+    // day) stay intact. Only categories are pushed in that case.
     const record = {
-      [channelKey]:        Math.round(exportPreview.revenue * 100) / 100,
-      [channelOrdersKey]:  exportPreview.orderCount,
-      categories:          mergedCategories,
-      source:              'imported',
+      categories: mergedCategories,
+      source:     'imported',
     };
+    if (exportChannel === 'pickup' || exportChannel === 'delivery') {
+      record[`${exportChannel}Revenue`] = Math.round(exportPreview.revenue * 100) / 100;
+      record[`${exportChannel}Orders`] = exportPreview.orderCount;
+    }
 
     if (exportTarget === 'daily') {
       onUpsertDay(key, record);
@@ -538,8 +545,16 @@ export default function ResultsTable({
                 </div>
 
                 <div className="export-summary-field">
-                  <label className="target-label">{t.exportChannelLabel || 'Channel'}</label>
+                  <label className="target-label">
+                    {t.exportChannelLabel || 'Channel'}
+                    <span className="export-optional-tag">{t.exportOptional || 'optional'}</span>
+                  </label>
                   <div className="export-target-pills">
+                    <button
+                      type="button"
+                      className={`filter-pill ${exportChannel === 'none' ? 'active' : ''}`}
+                      onClick={() => setExportChannel('none')}
+                    >{t.exportChannelNone || 'Unspecified'}</button>
                     <button
                       type="button"
                       className={`filter-pill ${exportChannel === 'pickup' ? 'active' : ''}`}
@@ -594,6 +609,11 @@ export default function ResultsTable({
                 {exportPreview.revenueMode === 'categories' && (
                   <span className="export-preview-pill export-preview-hint" title={t.exportRevenueFromCategoriesTitle || 'Every row is a category — totalling them as the day revenue.'}>
                     {t.exportRevenueFromCategoriesLabel || 'Revenue = categories sum'}
+                  </span>
+                )}
+                {exportChannel === 'none' && (
+                  <span className="export-preview-pill export-preview-muted" title={t.exportChannelNoneTitle || 'Channel revenue stays at 0 for delivery and pickup; only the categories are pushed.'}>
+                    {t.exportChannelNoneLabel || 'Channel skipped'}
                   </span>
                 )}
               </div>

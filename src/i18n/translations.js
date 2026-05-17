@@ -75,6 +75,10 @@ export const translations = {
     exportSelectedSuffix: 'selected',
     exportRevenueFromCategoriesLabel: 'Revenue = categories sum',
     exportRevenueFromCategoriesTitle: 'Every row is a category — totalling them as the day revenue.',
+    exportOptional: 'optional',
+    exportChannelNone: 'Unspecified',
+    exportChannelNoneLabel: 'Channel skipped',
+    exportChannelNoneTitle: 'Channel revenue stays at 0 for delivery and pickup; only the categories are pushed.',
     startOver: 'Start Over',
 
     // Table
@@ -392,6 +396,10 @@ export const translations = {
     exportSelectedSuffix: '已选',
     exportRevenueFromCategoriesLabel: '营收 = 分类合计',
     exportRevenueFromCategoriesTitle: '所有行均为分类，将其总和作为当日营收。',
+    exportOptional: '可选',
+    exportChannelNone: '不指定',
+    exportChannelNoneLabel: '渠道未指定',
+    exportChannelNoneTitle: '外卖和自取渠道营收保持为 0，仅推送分类数据。',
     startOver: '重新开始',
 
     // Table
@@ -709,6 +717,10 @@ export const translations = {
     exportSelectedSuffix: 'seleccionadas',
     exportRevenueFromCategoriesLabel: 'Ingresos = suma de categorías',
     exportRevenueFromCategoriesTitle: 'Todas las filas son categorías — se suman como ingresos del día.',
+    exportOptional: 'opcional',
+    exportChannelNone: 'Sin especificar',
+    exportChannelNoneLabel: 'Canal omitido',
+    exportChannelNoneTitle: 'Los ingresos de entrega y recogida permanecen en 0; solo se envían las categorías.',
     startOver: 'Empezar de Nuevo',
 
     // Table
