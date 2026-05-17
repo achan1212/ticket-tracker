@@ -103,18 +103,29 @@ export default function ResultsTable({
   const subtotalOf = (item) =>
     Number.isFinite(item.total) ? item.total : item.cost * item.quantity;
   const exportPreview = useMemo(() => {
-    const revenue = billableItems.reduce((s, i) => s + subtotalOf(i), 0);
-    const orderCount = billableItems.reduce((s, i) => s + i.quantity, 0);
+    // Build categories first — same logic regardless of mode.
     const cats = {};
     for (const item of categoryItems) {
       const key = item.name.trim();
       if (!key) continue;
       cats[key] = Math.round(((cats[key] || 0) + subtotalOf(item)) * 100) / 100;
     }
+
+    // Revenue rule: by default revenue comes from non-category (item-level)
+    // rows so category subtotals don't double-count. But when EVERY row is
+    // flagged as a category — typical for a Sold Item Report where each row
+    // *is* a category total — fall back to summing the categories themselves
+    // so the day doesn't end up with $0 revenue.
+    const useCategoriesAsRevenue = billableItems.length === 0 && categoryItems.length > 0;
+    const revenueSource = useCategoriesAsRevenue ? categoryItems : billableItems;
+    const revenue = revenueSource.reduce((s, i) => s + subtotalOf(i), 0);
+    const orderCount = revenueSource.reduce((s, i) => s + i.quantity, 0);
+
     return {
       revenue: Math.round(revenue * 100) / 100,
       orderCount,
       categories: cats,
+      revenueMode: useCategoriesAsRevenue ? 'categories' : 'items',
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [billableItems, categoryItems]);
@@ -202,6 +213,31 @@ export default function ResultsTable({
       onUpdateManualItem?.(info.originalIndex, { ...manualItems[info.originalIndex], isCategory: next });
     }
   };
+
+  // Bulk-set every row's isCategory flag in one shot. Used by the Select All
+  // / Clear All buttons in the export panel.
+  const setAllCategories = (value) => {
+    setScannedEdits(prev => {
+      const next = { ...prev };
+      scannedItems.forEach((_, i) => {
+        next[i] = { ...(next[i] || {}), isCategory: value };
+      });
+      return next;
+    });
+    manualItems.forEach((item, i) => {
+      if (item.isCategory !== value) {
+        onUpdateManualItem?.(i, { ...item, isCategory: value });
+      }
+    });
+  };
+
+  const allCategoryState = (() => {
+    if (allItems.length === 0) return 'none';
+    const checked = allItems.filter(i => i.isCategory).length;
+    if (checked === 0) return 'none';
+    if (checked === allItems.length) return 'all';
+    return 'some';
+  })();
 
   // Push the scanned/reviewed data into the daily or monthly summary store.
   // Channel revenue/orders are written for the chosen channel; categories
@@ -518,6 +554,31 @@ export default function ResultsTable({
                 </div>
               </div>
 
+              <div className="export-bulk-row">
+                <span className="export-bulk-label">
+                  {t.exportBulkLabel || 'Categories'}:
+                </span>
+                <button
+                  type="button"
+                  className={`filter-pill ${allCategoryState === 'all' ? 'active' : ''}`}
+                  onClick={() => setAllCategories(true)}
+                  disabled={allItems.length === 0}
+                >
+                  {t.exportSelectAllBtn || 'Select all'}
+                </button>
+                <button
+                  type="button"
+                  className={`filter-pill ${allCategoryState === 'none' ? 'active' : ''}`}
+                  onClick={() => setAllCategories(false)}
+                  disabled={allItems.length === 0}
+                >
+                  {t.exportClearAllBtn || 'Clear all'}
+                </button>
+                <span className="export-bulk-state">
+                  {allItems.filter(i => i.isCategory).length} / {allItems.length} {t.exportSelectedSuffix || 'selected'}
+                </span>
+              </div>
+
               <div className="export-summary-preview">
                 <span className="export-preview-pill"><strong>{exportPreview.orderCount}</strong> {t.labelOrders || 'orders'}</span>
                 <span className="export-preview-pill"><strong>{formatCurrency(exportPreview.revenue)}</strong> {t.labelRevenue || 'revenue'}</span>
@@ -528,6 +589,11 @@ export default function ResultsTable({
                 {detectedDate && exportDate === detectedDate && (
                   <span className="export-preview-pill export-preview-auto">
                     {t.foodCostDateAuto || 'auto'}
+                  </span>
+                )}
+                {exportPreview.revenueMode === 'categories' && (
+                  <span className="export-preview-pill export-preview-hint" title={t.exportRevenueFromCategoriesTitle || 'Every row is a category — totalling them as the day revenue.'}>
+                    {t.exportRevenueFromCategoriesLabel || 'Revenue = categories sum'}
                   </span>
                 )}
               </div>

@@ -69,6 +69,12 @@ export const translations = {
     exportNoItemsError: 'Nothing to export yet.',
     exportInvalidDateError: 'Pick a valid date.',
     exportNoCategoriesHint: 'Tip: check the category box on any row (Sliders, Tacos, Fries, …) to break out a category total. Without any marks, only the revenue and order count are pushed.',
+    exportBulkLabel: 'Categories',
+    exportSelectAllBtn: 'Select all',
+    exportClearAllBtn: 'Clear all',
+    exportSelectedSuffix: 'selected',
+    exportRevenueFromCategoriesLabel: 'Revenue = categories sum',
+    exportRevenueFromCategoriesTitle: 'Every row is a category — totalling them as the day revenue.',
     startOver: 'Start Over',
 
     // Table
@@ -380,6 +386,12 @@ export const translations = {
     exportNoItemsError: '当前没有可导出的条目。',
     exportInvalidDateError: '请选择有效日期。',
     exportNoCategoriesHint: '提示：在任意行（如 Sliders、Tacos、Fries 等）勾选分类复选框，即可单独导出该分类总额。若未勾选任何分类，仅营收和订单数会被推送。',
+    exportBulkLabel: '分类',
+    exportSelectAllBtn: '全选',
+    exportClearAllBtn: '全部清除',
+    exportSelectedSuffix: '已选',
+    exportRevenueFromCategoriesLabel: '营收 = 分类合计',
+    exportRevenueFromCategoriesTitle: '所有行均为分类，将其总和作为当日营收。',
     startOver: '重新开始',
 
     // Table
@@ -691,6 +703,12 @@ export const translations = {
     exportNoItemsError: 'No hay nada para exportar.',
     exportInvalidDateError: 'Selecciona una fecha válida.',
     exportNoCategoriesHint: 'Sugerencia: marca la casilla de categoría en cualquier fila (Sliders, Tacos, Fries, …) para desglosar el total por categoría. Sin marcas, solo se envían los ingresos y el conteo de pedidos.',
+    exportBulkLabel: 'Categorías',
+    exportSelectAllBtn: 'Seleccionar todo',
+    exportClearAllBtn: 'Limpiar todo',
+    exportSelectedSuffix: 'seleccionadas',
+    exportRevenueFromCategoriesLabel: 'Ingresos = suma de categorías',
+    exportRevenueFromCategoriesTitle: 'Todas las filas son categorías — se suman como ingresos del día.',
     startOver: 'Empezar de Nuevo',
 
     // Table

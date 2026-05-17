@@ -69,7 +69,18 @@ function parseReport(lines) {
     const unit = Math.round((amt / qty) * 100) / 100;
     // Keep the original report amount alongside the per-unit cost so category
     // exports and revenue rollups don't lose cents to the unit-cost rounding.
-    items.push({ _uid: makeUid('s'), name, cost: unit, quantity: qty, total: amt, addedAt: new Date().toISOString(), source: 'scanned' });
+    // Default isCategory:true — every row in a Sold Item Report is a
+    // category-level rollup, so this matches the typical export flow.
+    items.push({
+      _uid: makeUid('s'),
+      name,
+      cost: unit,
+      quantity: qty,
+      total: amt,
+      isCategory: true,
+      addedAt: new Date().toISOString(),
+      source: 'scanned',
+    });
   }
   return items;
 }
