@@ -1,15 +1,18 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrderScan } from '@hooks/useOrderScan';
+import { useLocalStore } from '@hooks/useLocalStore';
 import Scanner from '@components/Scanner/Scanner';
 import ResultsTable from '@components/ResultsTable/ResultsTable';
 import './ScannerTab.css';
 
 export default function ScannerTab({ onUpsertDay, onUpsertMonth, days = {}, months = {} }) {
   const { scan, results, loading, progress, error, rawText, reset, chunkIndex, chunkCount, detectedDate } = useOrderScan();
+  // Preview is a blob URL that can't survive a reload, so it stays ephemeral.
   const [preview, setPreview]       = useState(null);
-  const [manualItems, setManualItems] = useState([]);
-  const [showResults, setShowResults] = useState(false);
+  // Manual items + showResults persist so a user can review across sessions.
+  const [manualItems, setManualItems] = useLocalStore('scanner-manual-items', { version: 1, initial: [] });
+  const [showResults, setShowResults] = useLocalStore('scanner-show-results',  { version: 1, initial: false });
   const navigate = useNavigate();
 
   const handleScan = useCallback((file) => {
@@ -31,6 +34,16 @@ export default function ScannerTab({ onUpsertDay, onUpsertMonth, days = {}, mont
     setPreview(null);
     setManualItems([]);
     setShowResults(false);
+    // ResultsTable is about to unmount; its persisted state would otherwise
+    // linger as orphan localStorage entries. Wipe them explicitly so the
+    // next scan starts fully clean. (The orphan-prune effect inside
+    // ResultsTable also covers this on the next mount, but doing it here
+    // keeps localStorage tidy for users who never scan again.)
+    try {
+      localStorage.removeItem('ticket-tracker:scanner-edits');
+      localStorage.removeItem('ticket-tracker:scanner-removed');
+      localStorage.removeItem('ticket-tracker:scanner-order');
+    } catch {}
   };
 
   const handleAddItem = (item) => {

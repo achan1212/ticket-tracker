@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { exportToCSV, calcTotal, formatCurrency } from '@utils/helpers';
 import { useLang } from '../../i18n/LangContext.jsx';
+import { useLocalStore } from '@hooks/useLocalStore';
 import CostAnalysis from '@components/CostAnalysis/CostAnalysis';
 import './ResultsTable.css';
 
@@ -28,7 +29,9 @@ export default function ResultsTable({
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState('');
-  const [removedScanned, setRemovedScanned] = useState([]);
+  // Persisted across reloads: UIDs of removed scanned rows, per-row edits,
+  // and the current display order. Editing state stays ephemeral.
+  const [removedScanned, setRemovedScanned] = useLocalStore('scanner-removed', { version: 1, initial: [] });
   const [itemCosts, setItemCosts] = useState({});
   const [editingUid, setEditingUid] = useState(null);
   const [editForm, setEditForm] = useState(emptyForm);
@@ -50,10 +53,10 @@ export default function ResultsTable({
   useEffect(() => {
     if (detectedDate) setExportDate(detectedDate);
   }, [detectedDate]);
-  // Per-row overrides on scanned items (edits + isCategory). Stored locally so
-  // we don't mutate the upstream scan results and edits survive removals.
-  const [scannedEdits, setScannedEdits] = useState({});
-  const [displayOrder, setDisplayOrder] = useState([]);
+  // Per-row overrides on scanned items (edits + isCategory) and the display
+  // order both persist so a scan-and-review session survives reloads.
+  const [scannedEdits, setScannedEdits] = useLocalStore('scanner-edits', { version: 1, initial: {} });
+  const [displayOrder, setDisplayOrder] = useLocalStore('scanner-order', { version: 1, initial: [] });
   const [draggingUid, setDraggingUid] = useState(null);
   const [dragOverUid, setDragOverUid] = useState(null);
 
@@ -63,14 +66,15 @@ export default function ResultsTable({
   const itemsByUid = useMemo(() => {
     const map = new Map();
     scannedItems.forEach((item, i) => {
-      if (removedScanned.includes(i)) return;
       if (!item._uid) return;
-      const effective = scannedEdits[i] ? { ...item, ...scannedEdits[i] } : item;
-      map.set(item._uid, { item: effective, type: 'scanned', originalIndex: i });
+      if (removedScanned.includes(item._uid)) return;
+      const edit = scannedEdits[item._uid];
+      const effective = edit ? { ...item, ...edit } : item;
+      map.set(item._uid, { item: effective, type: 'scanned', originalIndex: i, uid: item._uid });
     });
     manualItems.forEach((item, i) => {
       if (!item._uid) return;
-      map.set(item._uid, { item, type: 'manual', originalIndex: i });
+      map.set(item._uid, { item, type: 'manual', originalIndex: i, uid: item._uid });
     });
     return map;
   }, [scannedItems, manualItems, scannedEdits, removedScanned]);
@@ -88,6 +92,35 @@ export default function ResultsTable({
       return [...existing, ...fresh];
     });
   }, [itemsByUid]);
+
+  // Persisted edits/removed-uids survive across reloads, but when the user
+  // starts a fresh scan (or clicks Start Over), the old keys become orphans
+  // tied to UIDs that no longer exist. Prune them — or clear entirely when
+  // the scan session is fully empty — so localStorage doesn't accumulate.
+  useEffect(() => {
+    if (scannedItems.length === 0 && manualItems.length === 0) {
+      if (Object.keys(scannedEdits).length > 0) setScannedEdits({});
+      if (removedScanned.length > 0) setRemovedScanned([]);
+      return;
+    }
+    const currentUids = new Set([
+      ...scannedItems.map(i => i._uid).filter(Boolean),
+      ...manualItems.map(i => i._uid).filter(Boolean),
+    ]);
+    setScannedEdits(prev => {
+      const next = {};
+      let changed = false;
+      for (const [uid, edit] of Object.entries(prev)) {
+        if (currentUids.has(uid)) next[uid] = edit; else changed = true;
+      }
+      return changed ? next : prev;
+    });
+    setRemovedScanned(prev => {
+      const filtered = prev.filter(uid => currentUids.has(uid));
+      return filtered.length === prev.length ? prev : filtered;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scannedItems, manualItems]);
 
   const orderedItems = displayOrder
     .map(uid => {
@@ -183,7 +216,7 @@ export default function ResultsTable({
     // category exports use their edited value rather than the parsed total.
     const total = Math.round(cost * quantity * 100) / 100;
     if (info.type === 'scanned') {
-      setScannedEdits(prev => ({ ...prev, [info.originalIndex]: { ...prev[info.originalIndex], name, cost, quantity, total } }));
+      setScannedEdits(prev => ({ ...prev, [info.uid]: { ...prev[info.uid], name, cost, quantity, total } }));
     } else {
       onUpdateManualItem?.(info.originalIndex, { ...manualItems[info.originalIndex], name, cost, quantity, total });
     }
@@ -201,7 +234,7 @@ export default function ResultsTable({
     if (!info) return;
     if (editingUid === uid) cancelEdit();
     if (info.type === 'scanned') {
-      setRemovedScanned(prev => [...prev, info.originalIndex]);
+      setRemovedScanned(prev => prev.includes(uid) ? prev : [...prev, uid]);
     } else {
       onAddItem({ __removeManualIndex: info.originalIndex });
     }
@@ -212,7 +245,7 @@ export default function ResultsTable({
     if (!info) return;
     const next = !info.item.isCategory;
     if (info.type === 'scanned') {
-      setScannedEdits(prev => ({ ...prev, [info.originalIndex]: { ...prev[info.originalIndex], isCategory: next } }));
+      setScannedEdits(prev => ({ ...prev, [info.uid]: { ...prev[info.uid], isCategory: next } }));
     } else {
       onUpdateManualItem?.(info.originalIndex, { ...manualItems[info.originalIndex], isCategory: next });
     }
@@ -223,8 +256,9 @@ export default function ResultsTable({
   const setAllCategories = (value) => {
     setScannedEdits(prev => {
       const next = { ...prev };
-      scannedItems.forEach((_, i) => {
-        next[i] = { ...(next[i] || {}), isCategory: value };
+      scannedItems.forEach((item) => {
+        if (!item._uid) return;
+        next[item._uid] = { ...(next[item._uid] || {}), isCategory: value };
       });
       return next;
     });

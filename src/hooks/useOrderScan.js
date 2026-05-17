@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { createWorker } from 'tesseract.js';
 import { detectReceiptDate } from '../utils/dateDetect.js';
+import { useLocalStore } from './useLocalStore.js';
 
 // Stable id for each item — drives drag-and-drop ordering and edit/remove
 // lookups in ResultsTable. Doesn't need to be cryptographically random,
@@ -297,14 +298,17 @@ async function prepareChunkPlan(file) {
 }
 
 export function useOrderScan() {
-  const [results, setResults] = useState(null);
+  // Persisted across reloads so a half-reviewed scan isn't lost when the user
+  // closes the tab or navigates away. Ephemeral progress/loading/error are
+  // intentionally NOT persisted — they only describe the in-flight scan.
+  const [results, setResults] = useLocalStore('scanner-results', { version: 1, initial: null });
+  const [rawText, setRawText] = useLocalStore('scanner-rawtext', { version: 1, initial: '' });
+  const [detectedDate, setDetectedDate] = useLocalStore('scanner-detected-date', { version: 1, initial: null });
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
-  const [rawText, setRawText] = useState('');
   const [chunkIndex, setChunkIndex] = useState(0);
   const [chunkCount, setChunkCount] = useState(0);
-  const [detectedDate, setDetectedDate] = useState(null);
 
   const scan = useCallback(async (file) => {
     setLoading(true);
