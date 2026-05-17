@@ -67,7 +67,9 @@ function parseReport(lines) {
     seen.add(key);
 
     const unit = Math.round((amt / qty) * 100) / 100;
-    items.push({ _uid: makeUid('s'), name, cost: unit, quantity: qty, addedAt: new Date().toISOString(), source: 'scanned' });
+    // Keep the original report amount alongside the per-unit cost so category
+    // exports and revenue rollups don't lose cents to the unit-cost rounding.
+    items.push({ _uid: makeUid('s'), name, cost: unit, quantity: qty, total: amt, addedAt: new Date().toISOString(), source: 'scanned' });
   }
   return items;
 }
@@ -95,7 +97,7 @@ function parseReceipt(lines) {
     if (name.length < 2) continue;
     if (cost === 0) continue;
 
-    items.push({ _uid: makeUid('s'), name, cost, quantity, addedAt: new Date().toISOString(), source: 'scanned' });
+    items.push({ _uid: makeUid('s'), name, cost, quantity, total: cost * quantity, addedAt: new Date().toISOString(), source: 'scanned' });
   }
   return items;
 }

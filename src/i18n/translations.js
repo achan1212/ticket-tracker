@@ -68,6 +68,7 @@ export const translations = {
     exportSuccessPrefix: 'Exported to',
     exportNoItemsError: 'Nothing to export yet.',
     exportInvalidDateError: 'Pick a valid date.',
+    exportNoCategoriesHint: 'Tip: check the category box on any row (Sliders, Tacos, Fries, …) to break out a category total. Without any marks, only the revenue and order count are pushed.',
     startOver: 'Start Over',
 
     // Table
@@ -378,6 +379,7 @@ export const translations = {
     exportSuccessPrefix: '已导出至',
     exportNoItemsError: '当前没有可导出的条目。',
     exportInvalidDateError: '请选择有效日期。',
+    exportNoCategoriesHint: '提示：在任意行（如 Sliders、Tacos、Fries 等）勾选分类复选框，即可单独导出该分类总额。若未勾选任何分类，仅营收和订单数会被推送。',
     startOver: '重新开始',
 
     // Table
@@ -688,6 +690,7 @@ export const translations = {
     exportSuccessPrefix: 'Exportado a',
     exportNoItemsError: 'No hay nada para exportar.',
     exportInvalidDateError: 'Selecciona una fecha válida.',
+    exportNoCategoriesHint: 'Sugerencia: marca la casilla de categoría en cualquier fila (Sliders, Tacos, Fries, …) para desglosar el total por categoría. Sin marcas, solo se envían los ingresos y el conteo de pedidos.',
     startOver: 'Empezar de Nuevo',
 
     // Table

@@ -98,14 +98,25 @@ export default function ResultsTable({
 
   // Preview the day/month aggregate that will be pushed when the user
   // confirms Export to Summary. Mirrors the math we'll actually persist.
+  // Prefer item.total when present — the parser stores the exact report
+  // amount, so categories don't lose cents to unit-cost rounding.
+  const subtotalOf = (item) =>
+    Number.isFinite(item.total) ? item.total : item.cost * item.quantity;
   const exportPreview = useMemo(() => {
-    const revenue = billableItems.reduce((s, i) => s + i.cost * i.quantity, 0);
+    const revenue = billableItems.reduce((s, i) => s + subtotalOf(i), 0);
     const orderCount = billableItems.reduce((s, i) => s + i.quantity, 0);
     const cats = {};
     for (const item of categoryItems) {
-      cats[item.name] = (cats[item.name] || 0) + item.cost * item.quantity;
+      const key = item.name.trim();
+      if (!key) continue;
+      cats[key] = Math.round(((cats[key] || 0) + subtotalOf(item)) * 100) / 100;
     }
-    return { revenue, orderCount, categories: cats };
+    return {
+      revenue: Math.round(revenue * 100) / 100,
+      orderCount,
+      categories: cats,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [billableItems, categoryItems]);
 
   const handleFormChange = (e) => {
@@ -153,10 +164,13 @@ export default function ResultsTable({
     if (!Number.isFinite(cost) || cost < 0) return setEditError(t.errorCost);
     if (!Number.isInteger(quantity) || quantity < 1) return setEditError(t.errorQty);
 
+    // Recompute `total` from the user-entered cost/quantity so downstream
+    // category exports use their edited value rather than the parsed total.
+    const total = Math.round(cost * quantity * 100) / 100;
     if (info.type === 'scanned') {
-      setScannedEdits(prev => ({ ...prev, [info.originalIndex]: { ...prev[info.originalIndex], name, cost, quantity } }));
+      setScannedEdits(prev => ({ ...prev, [info.originalIndex]: { ...prev[info.originalIndex], name, cost, quantity, total } }));
     } else {
-      onUpdateManualItem?.(info.originalIndex, { ...manualItems[info.originalIndex], name, cost, quantity });
+      onUpdateManualItem?.(info.originalIndex, { ...manualItems[info.originalIndex], name, cost, quantity, total });
     }
     setEditingUid(null);
     setEditError('');
@@ -517,6 +531,26 @@ export default function ResultsTable({
                   </span>
                 )}
               </div>
+
+              {Object.keys(exportPreview.categories).length === 0 && (
+                <p className="export-summary-hint">
+                  {t.exportNoCategoriesHint || 'Tip: check the category box on any row (Sliders, Tacos, Fries, …) to break out a category total. Without any marks, only the revenue and order count are pushed.'}
+                </p>
+              )}
+
+              {Object.keys(exportPreview.categories).length > 0 && (
+                <div className="export-summary-cats">
+                  <span className="export-summary-cats-label">{t.revenueCategories || 'Revenue Categories'}</span>
+                  <div className="category-list">
+                    {Object.entries(exportPreview.categories).map(([name, cost]) => (
+                      <div key={name} className="category-item">
+                        <span className="category-name">{name}</span>
+                        <span className="category-cost">{formatCurrency(cost)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {exportFeedback && (
                 <div className={`export-feedback export-feedback-${exportFeedback.type}`}>
