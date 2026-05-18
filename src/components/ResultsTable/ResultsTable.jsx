@@ -19,7 +19,7 @@ export default function ResultsTable({
   scannedItems, manualItems,
   onAddItem, onUpdateManualItem,
   onReset, preview, rawText,
-  detectedDate,
+  detectedDate, scannedFileName,
   onUpsertDay, onUpsertMonth,
   days = {}, months = {},
 }) {
@@ -27,6 +27,8 @@ export default function ResultsTable({
   const [activeTab, setActiveTab] = useState('summary');
   const [showRaw, setShowRaw] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  // Mirrors FoodCostList: per-file group is collapsible (default expanded).
+  const [fileGroupCollapsed, setFileGroupCollapsed] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState('');
   // Persisted across reloads: UIDs of removed scanned rows, per-row edits,
@@ -754,6 +756,27 @@ export default function ResultsTable({
               </div>
             )}
             <div className="table-panel">
+              <header className="rt-file-group-header">
+                <button
+                  type="button"
+                  className="rt-file-chevron"
+                  onClick={() => setFileGroupCollapsed(v => !v)}
+                  aria-expanded={!fileGroupCollapsed}
+                  aria-label={fileGroupCollapsed ? (t.expandBtn || 'Expand') : (t.collapseBtn || 'Collapse')}
+                  title={fileGroupCollapsed ? (t.expandBtn || 'Expand') : (t.collapseBtn || 'Collapse')}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+                <span className="rt-file-name" title={scannedFileName || t.scannerNoFile || 'Scanned items'}>
+                  {scannedFileName || t.scannerNoFile || 'Scanned items'}
+                </span>
+                <span className="rt-file-count">
+                  {allItems.length} {allItems.length !== 1 ? (t.itemsPlural || 'items') : (t.items || 'item')}
+                </span>
+              </header>
+              <div className={`rt-file-body ${fileGroupCollapsed ? 'rt-file-body-collapsed' : ''}`}>
               <table className="order-table">
                 <thead>
                   <tr>
@@ -816,6 +839,7 @@ export default function ResultsTable({
                   </div>
                 )}
               </div>
+              </div> {/* /rt-file-body */}
             </div>
           </div>
         </>

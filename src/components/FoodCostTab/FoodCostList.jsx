@@ -8,6 +8,16 @@ export default function FoodCostList({ fileGroups, onRemoveGroup, onUpdateItems,
   const { t } = useLang();
   const [editingKey, setEditingKey] = useState(null); // `${groupId}:${uid}`
   const [editForm, setEditForm] = useState(emptyEdit);
+  // Set of group IDs that the user has manually collapsed. Default state is
+  // expanded, matching the existing behavior — collapsing is opt-in.
+  const [collapsedIds, setCollapsedIds] = useState(() => new Set());
+  const toggleCollapsed = (id) => {
+    setCollapsedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const startEdit = (groupId, item) => {
     setEditingKey(`${groupId}:${item._uid}`);
@@ -42,9 +52,22 @@ export default function FoodCostList({ fileGroups, onRemoveGroup, onUpdateItems,
     <div className="fc-groups">
       {fileGroups.map(group => {
         const groupTotal = group.items.reduce((s, i) => s + i.cost * i.quantity, 0);
+        const isCollapsed = collapsedIds.has(group.id);
         return (
-          <section key={group.id} className={`fc-group fc-group-${group.status}`}>
+          <section key={group.id} className={`fc-group fc-group-${group.status} ${isCollapsed ? 'fc-group-collapsed' : ''}`}>
             <header className="fc-group-header">
+              <button
+                type="button"
+                className="fc-group-chevron"
+                onClick={() => toggleCollapsed(group.id)}
+                aria-expanded={!isCollapsed}
+                aria-label={isCollapsed ? (t.expandBtn || 'Expand') : (t.collapseBtn || 'Collapse')}
+                title={isCollapsed ? (t.expandBtn || 'Expand') : (t.collapseBtn || 'Collapse')}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
               <div className="fc-group-meta">
                 <span className="fc-group-name" title={group.name}>{group.name}</span>
                 {group.status === 'processing' && (
@@ -93,11 +116,11 @@ export default function FoodCostList({ fileGroups, onRemoveGroup, onUpdateItems,
               </div>
             </header>
 
-            {group.status === 'done' && group.items.length === 0 && (
+            {!isCollapsed && group.status === 'done' && group.items.length === 0 && (
               <p className="fc-group-empty">{t.foodCostNoItemsInFile || 'No items detected in this file.'}</p>
             )}
 
-            {group.status === 'done' && group.items.length > 0 && (
+            {!isCollapsed && group.status === 'done' && group.items.length > 0 && (
               <table className="fc-table">
                 <thead>
                   <tr>

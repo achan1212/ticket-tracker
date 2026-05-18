@@ -109,11 +109,26 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
   padding: 0.85rem 1.1rem;
   background: var(--surface2);
   border-bottom: 1px solid var(--border);
 }
+.fc-group-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s, transform 0.15s;
+}
+.fc-group-chevron:hover { color: var(--text); background: var(--surface); }
+.fc-group-collapsed .fc-group-chevron { transform: rotate(-90deg); }
+.fc-group-collapsed .fc-group-header { border-bottom-color: transparent; }
 .fc-group-error .fc-group-header { background: rgba(255,79,79,0.06); }
 .fc-group-meta {
   display: flex;

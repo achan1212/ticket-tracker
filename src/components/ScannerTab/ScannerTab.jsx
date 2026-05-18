@@ -13,12 +13,17 @@ export default function ScannerTab({ onUpsertDay, onUpsertMonth, days = {}, mont
   // Manual items + showResults persist so a user can review across sessions.
   const [manualItems, setManualItems] = useLocalStore('scanner-manual-items', { version: 1, initial: [] });
   const [showResults, setShowResults] = useLocalStore('scanner-show-results',  { version: 1, initial: false });
+  // Captured from the dropped file so the ResultsTable can label its file
+  // group with something more useful than "Scanner".
+  const [scannedFileName, setScannedFileName] = useLocalStore('scanner-file-name', { version: 1, initial: '' });
   const navigate = useNavigate();
 
   const handleScan = useCallback((file) => {
     setPreview(URL.createObjectURL(file));
     setShowResults(true);
+    setScannedFileName(file?.name || '');
     scan(file);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scan]);
 
   // Keep the Scanner (with its progress bar) on screen during OCR so the user
@@ -34,6 +39,7 @@ export default function ScannerTab({ onUpsertDay, onUpsertMonth, days = {}, mont
     setPreview(null);
     setManualItems([]);
     setShowResults(false);
+    setScannedFileName('');
     // ResultsTable is about to unmount; its persisted state would otherwise
     // linger as orphan localStorage entries. Wipe them explicitly so the
     // next scan starts fully clean. (The orphan-prune effect inside
@@ -84,6 +90,7 @@ export default function ScannerTab({ onUpsertDay, onUpsertMonth, days = {}, mont
       preview={preview}
       rawText={rawText}
       detectedDate={detectedDate}
+      scannedFileName={scannedFileName}
       onUpsertDay={onUpsertDay}
       onUpsertMonth={onUpsertMonth}
       days={days}
