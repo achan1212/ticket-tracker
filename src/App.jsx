@@ -135,7 +135,12 @@ export default function App() {
             <CostAnalysis items={allItems} itemCosts={itemCosts} onItemCostsChange={setItemCosts} />
           )}
           {activeTab === 'menu' && (
-            <MenuAnalytics days={days} months={months} dailySummary={dailySummary} />
+            <MenuAnalytics
+              days={days}
+              months={months}
+              dailySummary={dailySummary}
+              foodCostByDay={foodCostByDay}
+            />
           )}
           {activeTab === 'scanner' && (
             <ScannerTab

@@ -75,3 +75,67 @@ export function totalRevenueAcrossPeriods({ days = {}, months = {} }) {
   }
   return total;
 }
+
+// Median value of an array of numbers. Returns 0 for an empty input.
+function median(nums) {
+  if (nums.length === 0) return 0;
+  const sorted = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+/**
+ * Enrich each menu item with margin + quadrant data for the menu engineering
+ * matrix. Per-item food cost % comes from the per-item costs map; falls back
+ * to the global rate when no explicit entry exists.
+ *
+ *   item.foodCostPct       — percentage 0–100
+ *   item.foodCostUsed      — 'explicit' | 'global'
+ *   item.foodCostDollars   — total food cost for this item over the period
+ *   item.marginPct         — (revenue − food cost) / revenue × 100
+ *   item.quadrant          — 'star' | 'plowhorse' | 'puzzle' | 'dog'
+ *
+ * Quadrants are determined by the median total revenue (popularity axis)
+ * and median margin (profitability axis), so the split adapts to the
+ * user's actual menu rather than using fixed thresholds.
+ */
+export function withMatrixDimensions(items, costsByName = {}, globalCostPct = 30) {
+  if (items.length === 0) return { items: [], thresholds: { rev: 0, margin: 0 } };
+
+  const enriched = items.map(item => {
+    const explicit = costsByName[item.name];
+    const foodCostPct = Number.isFinite(explicit) ? explicit : globalCostPct;
+    const foodCostDollars = Math.round(item.totalRevenue * (foodCostPct / 100) * 100) / 100;
+    const marginRevenue = item.totalRevenue - foodCostDollars;
+    const marginPct = item.totalRevenue > 0
+      ? Math.round((marginRevenue / item.totalRevenue) * 1000) / 10
+      : 0;
+    return {
+      ...item,
+      foodCostPct,
+      foodCostUsed: Number.isFinite(explicit) ? 'explicit' : 'global',
+      foodCostDollars,
+      marginDollars: Math.round(marginRevenue * 100) / 100,
+      marginPct,
+    };
+  });
+
+  const revMedian = median(enriched.map(i => i.totalRevenue));
+  const marginMedian = median(enriched.map(i => i.marginPct));
+
+  const labelled = enriched.map(item => {
+    const popular = item.totalRevenue >= revMedian;
+    const profitable = item.marginPct >= marginMedian;
+    let quadrant;
+    if (popular && profitable)       quadrant = 'star';
+    else if (popular && !profitable) quadrant = 'plowhorse';
+    else if (!popular && profitable) quadrant = 'puzzle';
+    else                              quadrant = 'dog';
+    return { ...item, quadrant };
+  });
+
+  return {
+    items: labelled,
+    thresholds: { rev: revMedian, margin: marginMedian },
+  };
+}
