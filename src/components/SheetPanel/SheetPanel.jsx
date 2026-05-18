@@ -42,6 +42,7 @@ export default function SheetPanel({ dailySummary, months, onImport }) {
 
   return (
     <div className="sheet-panel">
+      <h2 className="page-title">{t.tabSheets}</h2>
       <div className="sheet-panel-inner">
 
         {/* EXPORT */}

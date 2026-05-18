@@ -305,6 +305,7 @@ export default function DeliveryAnalysis({ days, months = {}, dailySummary, onUp
 
   return (
     <div className="delivery-analysis">
+      <h2 className="page-title">{t.tabDelivery}</h2>
       <div className="da-section-toggle">
         <button className={`tab-btn ${activeSection === 'entry' ? 'active' : ''}`}
           onClick={() => setActiveSection('entry')}>

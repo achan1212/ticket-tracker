@@ -213,6 +213,7 @@ export default function Dashboard({ dailySummary, days, months }) {
 
   return (
     <div className="dashboard">
+      <h2 className="page-title">{t.tabDashboard}</h2>
 
       {/* ── DATE RANGE SELECTOR ── */}
       <div className="dash-range-card">

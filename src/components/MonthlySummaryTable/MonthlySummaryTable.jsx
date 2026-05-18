@@ -250,6 +250,7 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
 
   return (
     <div className="monthly-summary">
+      <h2 className="page-title">{t.tabMonthly}</h2>
 
       <div className="ds-controls">
         <div className="ds-filter-pills">

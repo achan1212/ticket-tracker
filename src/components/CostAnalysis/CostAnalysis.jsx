@@ -77,6 +77,7 @@ export default function CostAnalysis({ items, itemCosts = {}, onItemCostsChange 
 
   return (
     <div className="cost-analysis">
+      <h2 className="page-title">{t.tabAnalysis}</h2>
 
       {/* ── TARGETS CONFIG ── */}
       <div className="ca-section">

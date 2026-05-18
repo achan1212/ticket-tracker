@@ -256,6 +256,36 @@ body {
 /* App-level navbar styles live in src/components/Navbar/Navbar.css. */
 .app-main-tabs { padding: 2rem 4rem; align-items: stretch; }
 
+/* Shared page-level heading at the top of each tab so the user always
+   sees which subpage they're on. The app header above shows the brand;
+   this is the current page. */
+.page-title {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 1.25rem;
+  color: var(--text);
+}
+.page-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+.page-title-row .page-title { margin-bottom: 0; }
+.page-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: -0.65rem 0 1rem;
+  max-width: 60ch;
+}
+@media (max-width: 640px) {
+  .page-title { font-size: 1.35rem; }
+}
+
 /* Source badge (manual vs imported) — used by Daily + Monthly summary cards */
 .source-badge {
   font-size: 0.58rem;

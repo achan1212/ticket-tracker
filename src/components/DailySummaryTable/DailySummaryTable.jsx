@@ -205,6 +205,7 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
 
   return (
     <div className="daily-summary">
+      <h2 className="page-title">{t.tabSummary}</h2>
 
       <div className="ds-controls">
         <div className="ds-filter-pills">

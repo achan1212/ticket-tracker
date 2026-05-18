@@ -60,6 +60,52 @@ export default function ResultsTable({
   const [draggingUid, setDraggingUid] = useState(null);
   const [dragOverUid, setDragOverUid] = useState(null);
 
+  // Ephemeral undo stack — captures snapshots of scannedEdits + removedScanned
+  // + displayOrder before each mutating action. Capped at 30 entries so we
+  // don't grow unboundedly. Intentionally NOT persisted: undo history is per
+  // session, not part of the durable data.
+  const [undoStack, setUndoStack] = useState([]);
+  const UNDO_LIMIT = 30;
+  const pushUndo = () => {
+    setUndoStack(prev => {
+      const snap = {
+        scannedEdits: { ...scannedEdits },
+        removedScanned: [...removedScanned],
+        displayOrder: [...displayOrder],
+      };
+      const next = [...prev, snap];
+      return next.length > UNDO_LIMIT ? next.slice(-UNDO_LIMIT) : next;
+    });
+  };
+  const undo = () => {
+    setUndoStack(prev => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      setScannedEdits(last.scannedEdits);
+      setRemovedScanned(last.removedScanned);
+      setDisplayOrder(last.displayOrder);
+      return prev.slice(0, -1);
+    });
+  };
+
+  // Cmd/Ctrl + Z anywhere on the page triggers undo while a snapshot is on
+  // the stack. Skipped when focus is inside an editable field so the native
+  // text-undo still works.
+  useEffect(() => {
+    const handler = (e) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key !== 'z' || e.shiftKey) return;
+      const target = e.target;
+      const isField = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+      if (isField) return;
+      if (undoStack.length === 0) return;
+      e.preventDefault();
+      undo();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [undoStack]);
+
   // Build the canonical uid → item map. Scanned and manual items both flow
   // through here so every downstream operation (render, edit, remove, drag,
   // toggle-category) works off the same shape.
@@ -212,6 +258,7 @@ export default function ResultsTable({
     // category exports use their edited value rather than the parsed total.
     const total = Math.round(cost * quantity * 100) / 100;
     if (info.type === 'scanned') {
+      pushUndo();
       setScannedEdits(prev => ({ ...prev, [info.uid]: { ...prev[info.uid], name, cost, quantity, total } }));
     } else {
       onUpdateManualItem?.(info.originalIndex, { ...manualItems[info.originalIndex], name, cost, quantity, total });
@@ -230,6 +277,7 @@ export default function ResultsTable({
     if (!info) return;
     if (editingUid === uid) cancelEdit();
     if (info.type === 'scanned') {
+      pushUndo();
       setRemovedScanned(prev => prev.includes(uid) ? prev : [...prev, uid]);
     } else {
       onAddItem({ __removeManualIndex: info.originalIndex });
@@ -241,6 +289,7 @@ export default function ResultsTable({
     if (!info) return;
     const next = !info.item.isCategory;
     if (info.type === 'scanned') {
+      pushUndo();
       setScannedEdits(prev => ({ ...prev, [info.uid]: { ...prev[info.uid], isCategory: next } }));
     } else {
       onUpdateManualItem?.(info.originalIndex, { ...manualItems[info.originalIndex], isCategory: next });
@@ -250,6 +299,7 @@ export default function ResultsTable({
   // Bulk-set every row's isCategory flag in one shot. Used by the Select All
   // / Clear All buttons in the export panel.
   const setAllCategories = (value) => {
+    pushUndo();
     setScannedEdits(prev => {
       const next = { ...prev };
       scannedItems.forEach((item) => {
@@ -346,6 +396,7 @@ export default function ResultsTable({
     setDraggingUid(null);
     setDragOverUid(null);
     if (!sourceUid || sourceUid === targetUid) return;
+    pushUndo();
     setDisplayOrder(prev => {
       const next = [...prev];
       const from = next.indexOf(sourceUid);
@@ -501,10 +552,25 @@ export default function ResultsTable({
     <div className="results-wrap">
       <div className="results-header">
         <div className="results-meta">
-          <h2>{t.headerTitle}</h2>
+          <h2 className="page-title">{t.tabScanner}</h2>
           <span className="item-count">{allItems.length} {allItems.length !== 1 ? t.itemsPlural : t.items}</span>
         </div>
         <div className="results-actions">
+          {activeTab === 'summary' && (
+            <button
+              className="btn btn-ghost"
+              onClick={undo}
+              disabled={undoStack.length === 0}
+              title={undoStack.length === 0 ? (t.undoEmpty || 'Nothing to undo') : (t.undoTooltip || 'Undo last change (⌘Z)')}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '0.4rem', verticalAlign: '-2px' }}>
+                <path d="M3 7v6h6"/>
+                <path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>
+              </svg>
+              {t.undoBtn || 'Undo'}
+              {undoStack.length > 0 && <span className="undo-count"> ({undoStack.length})</span>}
+            </button>
+          )}
           {rawText && activeTab === 'summary' && (
             <button className="btn btn-ghost" onClick={() => setShowRaw(!showRaw)}>
               {showRaw ? t.hideRawOCR : t.viewRawOCR}
