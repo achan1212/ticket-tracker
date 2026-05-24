@@ -20,7 +20,7 @@ function shiftMonth(ym, delta) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function computePL(month, dailySummary, months, foodCostByMonth, targets) {
+function computePL(month, dailySummary, months, foodCostByMonth, targets, laborByMonth, fixedByMonth) {
   const manualRec = months[month];
   const dailyEntries = dailySummary.filter(d => d.date.startsWith(month));
   const dailyRevenue = dailyEntries.reduce((s, d) => s + d.revenue, 0);
@@ -35,10 +35,16 @@ function computePL(month, dailySummary, months, foodCostByMonth, targets) {
     ? foodCostByMonth[month]
     : ((manualRec?.foodCost > 0) ? manualRec.foodCost : 0);
 
+  // Actuals from the Operating Costs tab override the % estimates when present.
+  // Labor: per-month actual takes precedence. Overhead: actual fixed-cost sum
+  // replaces overheadPct (Fixed Costs is the user-visible label for the
+  // combined recurring expenses). Other stays as % only — it's a catch-all.
+  const laborActual = (laborByMonth || {})[month] || 0;
+  const fixedActual = (fixedByMonth || {})[month] || 0;
+  const laborCost    = laborActual > 0 ? laborActual : revenue * (targets.laborPct    / 100);
+  const overheadCost = fixedActual > 0 ? fixedActual : revenue * (targets.overheadPct / 100);
+  const otherCost    = revenue * (targets.otherPct / 100);
   const grossProfit  = revenue - foodCost;
-  const laborCost    = revenue * (targets.laborPct    / 100);
-  const overheadCost = revenue * (targets.overheadPct / 100);
-  const otherCost    = revenue * (targets.otherPct    / 100);
   const netIncome    = grossProfit - laborCost - overheadCost - otherCost;
 
   const pct = (n) => revenue > 0 ? (n / revenue) * 100 : 0;
@@ -48,11 +54,13 @@ function computePL(month, dailySummary, months, foodCostByMonth, targets) {
     foodCostPct: pct(foodCost),
     grossPct:    pct(grossProfit),
     netPct:      pct(netIncome),
+    laborIsActual:    laborActual > 0,
+    overheadIsActual: fixedActual > 0,
     hasData: revenue > 0 || foodCost > 0,
   };
 }
 
-export default function ProfitLossTab({ dailySummary, months, foodCostByMonth = {} }) {
+export default function ProfitLossTab({ dailySummary, months, foodCostByMonth = {}, laborByMonth = {}, fixedByMonth = {} }) {
   const { t } = useLang();
   const [selectedMonth, setSelectedMonth] = useState(currentMonthISO);
   const [targets, setTargets] = useLocalStore('pl-targets', {
@@ -77,16 +85,16 @@ export default function ProfitLossTab({ dailySummary, months, foodCostByMonth = 
   }, [dailySummary, months]);
 
   const pl = useMemo(
-    () => computePL(selectedMonth, dailySummary, months, foodCostByMonth, targets),
-    [selectedMonth, dailySummary, months, foodCostByMonth, targets]
+    () => computePL(selectedMonth, dailySummary, months, foodCostByMonth, targets, laborByMonth, fixedByMonth),
+    [selectedMonth, dailySummary, months, foodCostByMonth, targets, laborByMonth, fixedByMonth]
   );
 
   const history = useMemo(() => {
     return availableMonths.slice(0, 6).map(month => {
-      const h = computePL(month, dailySummary, months, foodCostByMonth, targets);
+      const h = computePL(month, dailySummary, months, foodCostByMonth, targets, laborByMonth, fixedByMonth);
       return { month, ...h };
     });
-  }, [availableMonths, dailySummary, months, foodCostByMonth, targets]);
+  }, [availableMonths, dailySummary, months, foodCostByMonth, targets, laborByMonth, fixedByMonth]);
 
   const stackSegments = pl.revenue > 0 ? [
     { label: t.plFoodCost  || 'Food',     pct: pl.foodCostPct,           color: 'var(--pl-food)'     },
@@ -170,32 +178,42 @@ export default function ProfitLossTab({ dailySummary, months, foodCostByMonth = 
               <span className="pl-label">
                 <span className="pl-deduct">−</span>
                 {t.plLabor || 'Labor'}
+                {pl.laborIsActual && <span className="pl-auto-badge">{t.plActual || 'actual'}</span>}
               </span>
-              <span className="pl-pct pl-pct-editable">
-                <input
-                  className="pl-pct-input"
-                  type="number" min="0" max="100" step="0.1"
-                  value={targets.laborPct}
-                  onChange={e => setTarget('laborPct', e.target.value)}
-                />%
-              </span>
+              {pl.laborIsActual ? (
+                <span className="pl-pct">{(pl.revenue > 0 ? (pl.laborCost / pl.revenue) * 100 : 0).toFixed(1)}%</span>
+              ) : (
+                <span className="pl-pct pl-pct-editable">
+                  <input
+                    className="pl-pct-input"
+                    type="number" min="0" max="100" step="0.1"
+                    value={targets.laborPct}
+                    onChange={e => setTarget('laborPct', e.target.value)}
+                  />%
+                </span>
+              )}
               <span className="pl-amount pl-amount-cost">−{formatCurrency(pl.laborCost)}</span>
             </div>
 
-            {/* Overhead */}
+            {/* Overhead / Fixed Costs */}
             <div className="pl-row pl-row-sub">
               <span className="pl-label">
                 <span className="pl-deduct">−</span>
                 {t.plOverhead || 'Overhead'}
+                {pl.overheadIsActual && <span className="pl-auto-badge">{t.plActual || 'actual'}</span>}
               </span>
-              <span className="pl-pct pl-pct-editable">
-                <input
-                  className="pl-pct-input"
-                  type="number" min="0" max="100" step="0.1"
-                  value={targets.overheadPct}
-                  onChange={e => setTarget('overheadPct', e.target.value)}
-                />%
-              </span>
+              {pl.overheadIsActual ? (
+                <span className="pl-pct">{(pl.revenue > 0 ? (pl.overheadCost / pl.revenue) * 100 : 0).toFixed(1)}%</span>
+              ) : (
+                <span className="pl-pct pl-pct-editable">
+                  <input
+                    className="pl-pct-input"
+                    type="number" min="0" max="100" step="0.1"
+                    value={targets.overheadPct}
+                    onChange={e => setTarget('overheadPct', e.target.value)}
+                  />%
+                </span>
+              )}
               <span className="pl-amount pl-amount-cost">−{formatCurrency(pl.overheadCost)}</span>
             </div>
 

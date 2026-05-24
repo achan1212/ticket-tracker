@@ -173,6 +173,20 @@
   padding: 0.6rem 1rem;
 }
 
+.dash-actual-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 0.55rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--accent-dim);
+  color: var(--accent);
+  padding: 0.1em 0.4em;
+  border-radius: 0.25rem;
+  vertical-align: middle;
+}
+
 /* Mobile: Dashboard */
 @media (max-width: 640px) {
   .chart-row { grid-template-columns: 1fr; }

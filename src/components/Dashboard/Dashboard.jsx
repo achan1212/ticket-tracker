@@ -141,7 +141,7 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-export default function Dashboard({ dailySummary, days, months, foodCostByDay = {}, foodCostByMonth = {} }) {
+export default function Dashboard({ dailySummary, days, months, foodCostByDay = {}, foodCostByMonth = {}, laborByMonth = {}, fixedByMonth = {} }) {
   const { t } = useLang();
   const { theme } = useTheme();
   const isDark = theme !== 'light';
@@ -259,6 +259,26 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
     return total;
   }, [foodCostByDay, fromDate, toDate]);
 
+  // Operating-costs actuals are stored per month. Sum any month that overlaps
+  // the active date range — pragmatic; partial-month overlaps still count the
+  // full month's actual.
+  const fromMonth = fromDate.slice(0, 7);
+  const toMonth   = toDate.slice(0, 7);
+  const laborActualTotal = useMemo(() => {
+    let total = 0;
+    for (const [m, amt] of Object.entries(laborByMonth)) {
+      if (m >= fromMonth && m <= toMonth) total += (amt || 0);
+    }
+    return total;
+  }, [laborByMonth, fromMonth, toMonth]);
+  const fixedActualTotal = useMemo(() => {
+    let total = 0;
+    for (const [m, amt] of Object.entries(fixedByMonth)) {
+      if (m >= fromMonth && m <= toMonth) total += (amt || 0);
+    }
+    return total;
+  }, [fixedByMonth, fromMonth, toMonth]);
+
   const totals = useMemo(() => {
     const revenue     = rawChartData.reduce((s, d) => s + d.revenue, 0);
     const deliveryRev = rawChartData.reduce((s, d) => s + d.delivery, 0);
@@ -270,17 +290,19 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
     const foodCostPct = revenue > 0 ? (foodCost / revenue) * 100 : 0;
     const grossProfit = revenue - foodCost;
     const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
-    const laborCost    = revenue * (plTargets.laborPct    / 100);
-    const overheadCost = revenue * (plTargets.overheadPct / 100);
-    const otherCost    = revenue * (plTargets.otherPct    / 100);
+    const laborCost    = laborActualTotal > 0 ? laborActualTotal : revenue * (plTargets.laborPct    / 100);
+    const overheadCost = fixedActualTotal > 0 ? fixedActualTotal : revenue * (plTargets.overheadPct / 100);
+    const otherCost    = revenue * (plTargets.otherPct / 100);
     const netIncome    = grossProfit - laborCost - overheadCost - otherCost;
     const netMarginPct = revenue > 0 ? (netIncome / revenue) * 100 : 0;
     return {
       revenue, deliveryRev, pickupRev, orderCount, avg, bestDay,
       foodCost, foodCostPct, grossProfit, grossMarginPct,
       laborCost, overheadCost, otherCost, netIncome, netMarginPct,
+      laborIsActual:    laborActualTotal > 0,
+      overheadIsActual: fixedActualTotal > 0,
     };
-  }, [rawChartData, foodCostTotal, plTargets]);
+  }, [rawChartData, foodCostTotal, plTargets, laborActualTotal, fixedActualTotal]);
 
   const hasFoodCost = totals.foodCost > 0;
 
@@ -447,14 +469,24 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
             {totals.revenue > 0 && (
               <>
                 <div className="dash-card">
-                  <p className="dash-card-label">{t.plLabor || 'Labor'}</p>
+                  <p className="dash-card-label">
+                    {t.plLabor || 'Labor'}
+                    {totals.laborIsActual && <span className="dash-actual-badge">{t.plActual || 'actual'}</span>}
+                  </p>
                   <p className="dash-card-value" style={{ color: C.foodCost }}>−{formatCurrency(totals.laborCost)}</p>
-                  <p className="dash-card-sub">{plTargets.laborPct}{t.dashOfTotal}</p>
+                  <p className="dash-card-sub">
+                    {totals.revenue > 0 ? ((totals.laborCost / totals.revenue) * 100).toFixed(1) : 0}{t.dashOfTotal}
+                  </p>
                 </div>
                 <div className="dash-card">
-                  <p className="dash-card-label">{t.plOverhead || 'Overhead'}</p>
+                  <p className="dash-card-label">
+                    {t.plOverhead || 'Overhead'}
+                    {totals.overheadIsActual && <span className="dash-actual-badge">{t.plActual || 'actual'}</span>}
+                  </p>
                   <p className="dash-card-value" style={{ color: C.foodCost }}>−{formatCurrency(totals.overheadCost)}</p>
-                  <p className="dash-card-sub">{plTargets.overheadPct}{t.dashOfTotal}</p>
+                  <p className="dash-card-sub">
+                    {totals.revenue > 0 ? ((totals.overheadCost / totals.revenue) * 100).toFixed(1) : 0}{t.dashOfTotal}
+                  </p>
                 </div>
                 <div className="dash-card">
                   <p className="dash-card-label">{t.plOther || 'Other'}</p>

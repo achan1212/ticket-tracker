@@ -28,6 +28,25 @@ export const translations = {
     tabFoodCost: 'Food Cost',
     tabMenu: 'Menu Analytics',
     tabPL: 'P&L',
+    tabOpCosts: 'Operating Costs',
+
+    // Operating Costs
+    opCostsTitle: 'Operating Costs',
+    opCostsSub: 'Track actual labor and fixed costs by month. Used by the P&L and Dashboard when present.',
+    opCostsLaborSection: 'Labor',
+    opCostsLaborHint: 'Total monthly labor (wages, taxes, benefits).',
+    opCostsFixedSection: 'Fixed Costs',
+    opCostsFixedHint: 'Add one line per recurring expense (rent, utilities, insurance, etc.).',
+    opCostsCategoryPlaceholder: 'Category (e.g. Rent)',
+    opCostsAmountPlaceholder: '0.00',
+    opCostsNotesPlaceholder: 'Notes (optional)',
+    opCostsAddBtn: 'Add',
+    opCostsRemoveTitle: 'Remove',
+    opCostsNoFixed: 'No fixed costs entered for this month yet.',
+    opCostsTotalLabor: 'Total Labor',
+    opCostsTotalFixed: 'Total Fixed Costs',
+    opCostsTotal: 'Total Operating Costs',
+    plActual: 'actual',
 
     // Profit & Loss
     plTitle: 'Profit & Loss',
@@ -458,6 +477,25 @@ export const translations = {
     tabFoodCost: '食材成本',
     tabMenu: '菜单分析',
     tabPL: '损益',
+    tabOpCosts: '运营成本',
+
+    // 运营成本
+    opCostsTitle: '运营成本',
+    opCostsSub: '按月录入实际人工和固定成本。损益表和数据看板将优先使用这些数据。',
+    opCostsLaborSection: '人工',
+    opCostsLaborHint: '每月人工总成本（工资、税费、福利）。',
+    opCostsFixedSection: '固定成本',
+    opCostsFixedHint: '每项经常性支出添加一行（房租、水电、保险等）。',
+    opCostsCategoryPlaceholder: '类别（如：房租）',
+    opCostsAmountPlaceholder: '0.00',
+    opCostsNotesPlaceholder: '备注（可选）',
+    opCostsAddBtn: '添加',
+    opCostsRemoveTitle: '删除',
+    opCostsNoFixed: '本月暂未录入固定成本。',
+    opCostsTotalLabor: '人工合计',
+    opCostsTotalFixed: '固定成本合计',
+    opCostsTotal: '运营成本合计',
+    plActual: '实际',
 
     // Profit & Loss
     plTitle: '损益表',
@@ -888,6 +926,25 @@ export const translations = {
     tabFoodCost: 'Costo de Alimentos',
     tabMenu: 'Análisis del Menú',
     tabPL: 'P&G',
+    tabOpCosts: 'Costos Operativos',
+
+    // Costos Operativos
+    opCostsTitle: 'Costos Operativos',
+    opCostsSub: 'Registra mano de obra y costos fijos reales por mes. P&G y Panel los usan cuando están presentes.',
+    opCostsLaborSection: 'Mano de Obra',
+    opCostsLaborHint: 'Total mensual de mano de obra (salarios, impuestos, beneficios).',
+    opCostsFixedSection: 'Costos Fijos',
+    opCostsFixedHint: 'Añade una línea por cada gasto recurrente (alquiler, servicios, seguros, etc.).',
+    opCostsCategoryPlaceholder: 'Categoría (ej. Alquiler)',
+    opCostsAmountPlaceholder: '0.00',
+    opCostsNotesPlaceholder: 'Notas (opcional)',
+    opCostsAddBtn: 'Añadir',
+    opCostsRemoveTitle: 'Eliminar',
+    opCostsNoFixed: 'Aún no se han registrado costos fijos para este mes.',
+    opCostsTotalLabor: 'Mano de Obra Total',
+    opCostsTotalFixed: 'Costos Fijos Totales',
+    opCostsTotal: 'Costos Operativos Totales',
+    plActual: 'real',
 
     // Profit & Loss
     plTitle: 'Ganancias y Pérdidas',

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useOrderStore } from '@hooks/useOrderStore';
 import { useMonthlyStore } from '@hooks/useMonthlyStore';
 import { useFoodCostStore } from '@hooks/useFoodCostStore';
+import { useOperatingCostsStore } from '@hooks/useOperatingCostsStore';
 import { useTheme } from '@hooks/useTheme';
 import { useLang } from './i18n/LangContext.jsx';
 import Navbar from '@components/Navbar/Navbar.jsx';
@@ -21,6 +22,7 @@ const ScannerTab          = lazy(() => import('@components/ScannerTab/ScannerTab
 const FoodCostTab         = lazy(() => import('@components/FoodCostTab/FoodCostTab.jsx'));
 const MenuAnalytics       = lazy(() => import('@components/MenuAnalytics/MenuAnalytics.jsx'));
 const ProfitLossTab       = lazy(() => import('@components/ProfitLossTab/ProfitLossTab.jsx'));
+const OperatingCostsTab   = lazy(() => import('@components/OperatingCostsTab/OperatingCostsTab.jsx'));
 
 const TAB_KEYS = getAllTabKeys();
 
@@ -28,11 +30,13 @@ export default function App() {
   const { days, upsertDay, removeDay, clearAll: clearAllDays, dailySummary } = useOrderStore();
   const { months, upsertMonth, removeMonth, clearAll: clearAllMonths } = useMonthlyStore();
   const { groups: foodCostGroups, foodCostByDay, foodCostByMonth, upsertGroup: upsertFoodCostGroup, clearAll: clearAllFoodCost } = useFoodCostStore();
+  const opCosts = useOperatingCostsStore();
 
   const handleClearAllData = () => {
     clearAllDays();
     clearAllMonths();
     clearAllFoodCost();
+    opCosts.clearAll();
     try { localStorage.removeItem('ticket-tracker:pl-targets'); } catch { /* quota / private browsing */ }
     // Reload so every component re-reads from a clean localStorage. The stores
     // above already cleared their in-memory state, but child components like
@@ -139,6 +143,8 @@ export default function App() {
               months={months}
               foodCostByDay={foodCostByDay}
               foodCostByMonth={foodCostByMonth}
+              laborByMonth={opCosts.laborByMonth}
+              fixedByMonth={opCosts.fixedByMonth}
             />
           )}
           {activeTab === 'pl' && (
@@ -146,6 +152,19 @@ export default function App() {
               dailySummary={dailySummary}
               months={months}
               foodCostByMonth={foodCostByMonth}
+              laborByMonth={opCosts.laborByMonth}
+              fixedByMonth={opCosts.fixedByMonth}
+            />
+          )}
+          {activeTab === 'opcosts' && (
+            <OperatingCostsTab
+              data={opCosts.data}
+              laborByMonth={opCosts.laborByMonth}
+              fixedByMonth={opCosts.fixedByMonth}
+              setLaborForMonth={opCosts.setLaborForMonth}
+              addFixedCost={opCosts.addFixedCost}
+              updateFixedCost={opCosts.updateFixedCost}
+              removeFixedCost={opCosts.removeFixedCost}
             />
           )}
           {activeTab === 'delivery' && (
