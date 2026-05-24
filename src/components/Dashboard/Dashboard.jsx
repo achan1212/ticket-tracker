@@ -6,6 +6,7 @@ import {
 import { formatCurrency } from '@utils/helpers';
 import { useLang } from '../../i18n/LangContext.jsx';
 import { useTheme } from '../../hooks/useTheme.js';
+import { useLocalStore } from '@hooks/useLocalStore.js';
 import './Dashboard.css';
 
 // Dark-mode defaults (overridden per-render for light theme)
@@ -145,6 +146,13 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
   const { theme } = useTheme();
   const isDark = theme !== 'light';
 
+  // Same pl-targets the Profit & Loss view writes to — keeps the Dashboard's
+  // labor/overhead/other estimates in sync with the P&L tab.
+  const [plTargets] = useLocalStore('pl-targets', {
+    version: 1,
+    initial: { laborPct: 30, overheadPct: 16, otherPct: 5 },
+  });
+
   // Theme-aware chart colors. Light mode needs higher-contrast alternatives
   // because the dark-mode neon yellow (#e8ff47) is illegible on white.
   const C = {
@@ -262,8 +270,17 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
     const foodCostPct = revenue > 0 ? (foodCost / revenue) * 100 : 0;
     const grossProfit = revenue - foodCost;
     const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
-    return { revenue, deliveryRev, pickupRev, orderCount, avg, bestDay, foodCost, foodCostPct, grossProfit, grossMarginPct };
-  }, [rawChartData, foodCostTotal]);
+    const laborCost    = revenue * (plTargets.laborPct    / 100);
+    const overheadCost = revenue * (plTargets.overheadPct / 100);
+    const otherCost    = revenue * (plTargets.otherPct    / 100);
+    const netIncome    = grossProfit - laborCost - overheadCost - otherCost;
+    const netMarginPct = revenue > 0 ? (netIncome / revenue) * 100 : 0;
+    return {
+      revenue, deliveryRev, pickupRev, orderCount, avg, bestDay,
+      foodCost, foodCostPct, grossProfit, grossMarginPct,
+      laborCost, overheadCost, otherCost, netIncome, netMarginPct,
+    };
+  }, [rawChartData, foodCostTotal, plTargets]);
 
   const hasFoodCost = totals.foodCost > 0;
 
@@ -415,8 +432,8 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
               <>
                 <div className="dash-card">
                   <p className="dash-card-label">{t.dashFoodCost || 'Food Cost'}</p>
-                  <p className="dash-card-value" style={{ color: C.foodCost }}>{formatCurrency(totals.foodCost)}</p>
-                  <p className="dash-card-sub">{spanDays} {t.dashDayRange}</p>
+                  <p className="dash-card-value" style={{ color: C.foodCost }}>−{formatCurrency(totals.foodCost)}</p>
+                  <p className="dash-card-sub">{totals.foodCostPct.toFixed(1)}{t.dashOfTotal}</p>
                 </div>
                 <div className="dash-card">
                   <p className="dash-card-label">{t.dashFoodCostPct || 'Food Cost %'}</p>
@@ -425,10 +442,34 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
                   </p>
                   <p className="dash-card-sub">{t.dashFoodCostTarget || 'Target 25–32%'}</p>
                 </div>
+              </>
+            )}
+            {totals.revenue > 0 && (
+              <>
+                <div className="dash-card">
+                  <p className="dash-card-label">{t.plLabor || 'Labor'}</p>
+                  <p className="dash-card-value" style={{ color: C.foodCost }}>−{formatCurrency(totals.laborCost)}</p>
+                  <p className="dash-card-sub">{plTargets.laborPct}{t.dashOfTotal}</p>
+                </div>
+                <div className="dash-card">
+                  <p className="dash-card-label">{t.plOverhead || 'Overhead'}</p>
+                  <p className="dash-card-value" style={{ color: C.foodCost }}>−{formatCurrency(totals.overheadCost)}</p>
+                  <p className="dash-card-sub">{plTargets.overheadPct}{t.dashOfTotal}</p>
+                </div>
+                <div className="dash-card">
+                  <p className="dash-card-label">{t.plOther || 'Other'}</p>
+                  <p className="dash-card-value" style={{ color: C.foodCost }}>−{formatCurrency(totals.otherCost)}</p>
+                  <p className="dash-card-sub">{plTargets.otherPct}{t.dashOfTotal}</p>
+                </div>
                 <div className="dash-card highlight">
-                  <p className="dash-card-label">{t.dashGrossProfit || 'Gross Profit'}</p>
-                  <p className="dash-card-value">{formatCurrency(totals.grossProfit)}</p>
-                  <p className="dash-card-sub">{totals.grossMarginPct.toFixed(1)}% {t.dashMarginSuffix || 'margin'}</p>
+                  <p className="dash-card-label">{t.plNetIncome || 'Net Operating Income'}</p>
+                  <p
+                    className="dash-card-value"
+                    style={{ color: totals.netIncome >= 0 ? C.delivery : '#ef4444' }}
+                  >
+                    {totals.netIncome < 0 ? '−' : ''}{formatCurrency(Math.abs(totals.netIncome))}
+                  </p>
+                  <p className="dash-card-sub">{totals.netMarginPct.toFixed(1)}% {t.dashMarginSuffix || 'margin'}</p>
                 </div>
               </>
             )}
