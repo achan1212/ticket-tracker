@@ -21,6 +21,7 @@ function DayForm({ initial, onSave, onCancel }) {
     pickupRevenue:   initial?.pickupRevenue   || '',
     deliveryOrders:  initial?.deliveryOrders  || '',
     pickupOrders:    initial?.pickupOrders    || '',
+    totalRevenue:    initial?.totalRevenue    || '',
     categories:      initial?.categories      || {},
     notes:           initial?.notes           || '',
   });
@@ -47,11 +48,13 @@ function DayForm({ initial, onSave, onCancel }) {
     });
   };
 
-  const totalRevenue  = (parseFloat(form.deliveryRevenue) || 0) + (parseFloat(form.pickupRevenue) || 0);
+  const breakdownTotal = (parseFloat(form.deliveryRevenue) || 0) + (parseFloat(form.pickupRevenue) || 0);
+  const totalRevenueOverride = parseFloat(form.totalRevenue) || 0;
+  const effectiveTotalRevenue = totalRevenueOverride > 0 ? totalRevenueOverride : breakdownTotal;
   const totalOrders   = (parseInt(form.deliveryOrders)    || 0) + (parseInt(form.pickupOrders)    || 0);
   const categoryTotal = Object.values(form.categories).reduce((sum, val) => sum + val, 0);
   const hasCategories = Object.keys(form.categories).length > 0;
-  const categoryMatch = hasCategories ? Math.abs(categoryTotal - totalRevenue) < 0.01 : true;
+  const categoryMatch = hasCategories ? Math.abs(categoryTotal - effectiveTotalRevenue) < 0.01 : true;
 
   const handleSave = () => {
     onSave({
@@ -59,6 +62,7 @@ function DayForm({ initial, onSave, onCancel }) {
       pickupRevenue:   parseFloat(form.pickupRevenue)   || 0,
       deliveryOrders:  parseInt(form.deliveryOrders)    || 0,
       pickupOrders:    parseInt(form.pickupOrders)      || 0,
+      totalRevenue:    totalRevenueOverride,
       categories:      form.categories,
       notes:           form.notes.trim(),
       source:          'manual',
@@ -111,6 +115,28 @@ function DayForm({ initial, onSave, onCancel }) {
         </div>
       </div>
 
+      <div className="day-form-section" style={{ marginTop: '0.75rem' }}>
+        <p className="day-form-section-label">{t.formTotalRevenueLabel || 'Total Revenue'}</p>
+        <div className="day-form-row">
+          <div className="day-form-field">
+            <label className="target-label">{t.labelRevenue}</label>
+            <div className="target-input-wrap">
+              <span className="target-prefix">$</span>
+              <input
+                className="form-input form-input-sm"
+                type="number" min="0" step="0.01"
+                placeholder={breakdownTotal > 0 ? breakdownTotal.toFixed(2) : '0.00'}
+                value={form.totalRevenue}
+                onChange={e => set('totalRevenue', e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <p className="category-help-text">
+          {t.formTotalRevenueHint || 'Leave blank to auto-sum from Delivery + Pickup. Set explicitly when the total includes revenue outside those channels.'}
+        </p>
+      </div>
+
       <div className="day-form-field" style={{ marginTop: '0.75rem' }}>
         <label className="target-label">{t.formNotesOptional}</label>
         <input className="form-input" placeholder={t.formNotesPlaceholderDay}
@@ -156,15 +182,15 @@ function DayForm({ initial, onSave, onCancel }) {
 
         {hasCategories && !categoryMatch && (
           <div className="category-warning">
-            {t.categoryWarningPre} {formatCurrency(categoryTotal)} {t.categoryWarningMid} {formatCurrency(totalRevenue)}
+            {t.categoryWarningPre} {formatCurrency(categoryTotal)} {t.categoryWarningMid} {formatCurrency(effectiveTotalRevenue)}
           </div>
         )}
       </div>
 
       <div className="day-form-totals">
-        <span className="dft-item">{t.formTotalRevenue} <strong>{formatCurrency(totalRevenue)}</strong></span>
+        <span className="dft-item">{t.formTotalRevenue} <strong>{formatCurrency(effectiveTotalRevenue)}</strong></span>
         <span className="dft-item">{t.formTotalOrders} <strong>{totalOrders}</strong></span>
-        {totalOrders > 0 && <span className="dft-item">{t.formAvgLabel} <strong>{formatCurrency(totalRevenue / totalOrders)}</strong></span>}
+        {totalOrders > 0 && <span className="dft-item">{t.formAvgLabel} <strong>{formatCurrency(effectiveTotalRevenue / totalOrders)}</strong></span>}
         {hasCategories && (
           <span className="dft-item">{t.formCategoryTotal} <strong style={{ color: categoryMatch ? 'inherit' : 'var(--danger)' }}>{formatCurrency(categoryTotal)}</strong></span>
         )}
@@ -265,6 +291,9 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
               <div className="day-type-pills">
                 {day.deliveryRevenue > 0 && <span className="type-pill delivery">{t.labelDelivery} {formatCurrency(day.deliveryRevenue)}</span>}
                 {day.pickupRevenue   > 0 && <span className="type-pill pickup">{t.labelPickup} {formatCurrency(day.pickupRevenue)}</span>}
+                {day.revenue > 0 && day.revenue !== day.deliveryRevenue && day.revenue !== day.pickupRevenue && (
+                  <span className="type-pill total">{t.total || 'Total'} {formatCurrency(day.revenue)}</span>
+                )}
                 {day.notes && <span className="type-pill notes-pill">📝 {day.notes}</span>}
                 {days[day.date]?.categories && Object.keys(days[day.date].categories).length > 0 && (
                   <span className="type-pill category-pill">💰 {Object.keys(days[day.date].categories).length} {t.categoriesBadge}</span>

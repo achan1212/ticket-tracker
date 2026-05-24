@@ -8,6 +8,7 @@ import { useLocalStore } from './useLocalStore.js';
 //   pickupRevenue: 0,
 //   deliveryOrders: 0,
 //   pickupOrders: 0,
+//   totalRevenue: 0, // optional override; when > 0 it replaces delivery+pickup as the day's bottom-line revenue
 //   // 3rd party platform sales (tracked separately)
 //   doordash: 0, ubereats: 0, grubhub: 0,
 //   doordashOrders: 0, ubereatsOrders: 0, grubhubOrders: 0,
@@ -46,17 +47,23 @@ export function useOrderStore() {
     });
   }, [setDays]);
 
-  // Sorted array descending for display
+  // Sorted array descending for display. A manual `totalRevenue` field, when
+  // set, overrides the delivery+pickup sum — same semantics as the monthly
+  // record, so users can record a day's bottom-line total even when the
+  // channel breakdown is incomplete.
   const dailySummary = Object.values(days)
-    .map(d => ({
-      ...d,
-      revenue: (d.deliveryRevenue || 0) + (d.pickupRevenue || 0),
-      orderCount: (d.deliveryOrders || 0) + (d.pickupOrders || 0),
-      avgOrderValue: ((d.deliveryOrders || 0) + (d.pickupOrders || 0)) > 0
-        ? ((d.deliveryRevenue || 0) + (d.pickupRevenue || 0)) / ((d.deliveryOrders || 0) + (d.pickupOrders || 0))
-        : 0,
-      thirdPartyRevenue: (d.doordash || 0) + (d.ubereats || 0) + (d.grubhub || 0),
-    }))
+    .map(d => {
+      const breakdownTotal = (d.deliveryRevenue || 0) + (d.pickupRevenue || 0);
+      const revenue = (d.totalRevenue || 0) > 0 ? d.totalRevenue : breakdownTotal;
+      const orderCount = (d.deliveryOrders || 0) + (d.pickupOrders || 0);
+      return {
+        ...d,
+        revenue,
+        orderCount,
+        avgOrderValue: orderCount > 0 ? revenue / orderCount : 0,
+        thirdPartyRevenue: (d.doordash || 0) + (d.ubereats || 0) + (d.grubhub || 0),
+      };
+    })
     .sort((a, b) => b.date.localeCompare(a.date));
 
   return { days, upsertDay, removeDay, dailySummary };
