@@ -204,7 +204,7 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
           revenue:  parseFloat(d.revenue.toFixed(2)),
           delivery: parseFloat(d.deliveryRevenue.toFixed(2)),
           pickup:   parseFloat(d.pickupRevenue.toFixed(2)),
-          foodCost: parseFloat(((foodCostByDay[d.date]) || 0).toFixed(2)),
+          foodCost: parseFloat(((foodCostByDay[d.date] ?? days[d.date]?.foodCost ?? 0)).toFixed(2)),
           orders:   d.orderCount,
           avg:      parseFloat(d.avgOrderValue.toFixed(2)),
         };
@@ -251,13 +251,25 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
 
   // Period-level food cost spend. Summed from the source map (not chart points)
   // so imports on dates without sales records still count toward gross profit.
+  // Days without a live foodCostByDay entry fall back to the day record's
+  // foodCost field — populated by Sheets imports so restored data still
+  // contributes to gross profit math.
   const foodCostTotal = useMemo(() => {
     let total = 0;
+    const counted = new Set();
     for (const [date, amt] of Object.entries(foodCostByDay)) {
-      if (date >= fromDate && date <= toDate) total += amt;
+      if (date >= fromDate && date <= toDate) {
+        total += amt;
+        counted.add(date);
+      }
+    }
+    for (const [date, day] of Object.entries(days)) {
+      if (counted.has(date)) continue;
+      if (date < fromDate || date > toDate) continue;
+      total += day.foodCost || 0;
     }
     return total;
-  }, [foodCostByDay, fromDate, toDate]);
+  }, [foodCostByDay, days, fromDate, toDate]);
 
   // Operating-costs actuals are stored per month. Sum any month that overlaps
   // the active date range — pragmatic; partial-month overlaps still count the

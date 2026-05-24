@@ -339,7 +339,7 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
                 <span className="day-stat-value">{day.orderCount > 0 ? formatCurrency(day.avgOrderValue) : '—'}</span>
               </div>
               {(() => {
-                const fc = foodCostByDay[day.date];
+                const fc = foodCostByDay[day.date] ?? days[day.date]?.foodCost;
                 if (!fc) return null;
                 const pct = day.revenue > 0 ? (fc / day.revenue) * 100 : null;
                 // Industry benchmark: 28–32 % is healthy for full-service casual.

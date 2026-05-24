@@ -377,18 +377,29 @@ function parseSummarySheet(ws, periodKey, defaultSource) {
     const totalOverride = totalManCol >= 0 ? parseFloat(row[totalManCol]) || 0 : 0;
     const foodCostVal   = foodCostCol >= 0 ? parseFloat(row[foodCostCol]) || 0 : 0;
 
+    // Legacy fallback: sheets exported before the "Total Revenue (Manual)"
+    // column existed had no delivery/pickup breakdown at all, so we dump
+    // Total Revenue into deliveryRevenue to preserve the value. Newer sheets
+    // always carry both an explicit Delivery column AND a Manual override
+    // column — using the same fallback there would stuff the override total
+    // back into deliveryRevenue, double-counting on the next export. Detect
+    // the legacy case by the absence of the Manual column.
+    const isLegacySheet = totalManCol === -1;
+    const fallbackDelRev = isLegacySheet && delRevCol === -1 ? (parseFloat(row[totalRevCol]) || 0) : 0;
+    const fallbackDelOrd = isLegacySheet && delOrdCol === -1 ? (parseInt(row[totalOrdCol])   || 0) : 0;
+
     const record = {
       [periodKey]:     period,
-      deliveryRevenue: parseFloat(delRevCol >= 0 ? row[delRevCol] : row[totalRevCol]) || 0,
-      pickupRevenue:   parseFloat(pkRevCol  >= 0 ? row[pkRevCol]  : 0) || 0,
-      deliveryOrders:  parseInt(delOrdCol   >= 0 ? row[delOrdCol] : row[totalOrdCol]) || 0,
-      pickupOrders:    parseInt(pkOrdCol    >= 0 ? row[pkOrdCol]  : 0) || 0,
-      doordash:        parseFloat(ddRevCol  >= 0 ? row[ddRevCol]  : 0) || 0,
-      ubereats:        parseFloat(ueRevCol  >= 0 ? row[ueRevCol]  : 0) || 0,
-      grubhub:         parseFloat(ghRevCol  >= 0 ? row[ghRevCol]  : 0) || 0,
-      doordashOrders:  parseInt(ddOrdCol    >= 0 ? row[ddOrdCol]  : 0) || 0,
-      ubereatsOrders:  parseInt(ueOrdCol    >= 0 ? row[ueOrdCol]  : 0) || 0,
-      grubhubOrders:   parseInt(ghOrdCol    >= 0 ? row[ghOrdCol]  : 0) || 0,
+      deliveryRevenue: delRevCol >= 0 ? (parseFloat(row[delRevCol]) || 0) : fallbackDelRev,
+      pickupRevenue:   parseFloat(pkRevCol >= 0 ? row[pkRevCol] : 0) || 0,
+      deliveryOrders:  delOrdCol >= 0 ? (parseInt(row[delOrdCol]) || 0)   : fallbackDelOrd,
+      pickupOrders:    parseInt(pkOrdCol >= 0 ? row[pkOrdCol] : 0) || 0,
+      doordash:        parseFloat(ddRevCol >= 0 ? row[ddRevCol] : 0) || 0,
+      ubereats:        parseFloat(ueRevCol >= 0 ? row[ueRevCol] : 0) || 0,
+      grubhub:         parseFloat(ghRevCol >= 0 ? row[ghRevCol] : 0) || 0,
+      doordashOrders:  parseInt(ddOrdCol >= 0 ? row[ddOrdCol] : 0) || 0,
+      ubereatsOrders:  parseInt(ueOrdCol >= 0 ? row[ueOrdCol] : 0) || 0,
+      grubhubOrders:   parseInt(ghOrdCol >= 0 ? row[ghOrdCol] : 0) || 0,
       notes:           notesCol >= 0 ? String(row[notesCol] || '').trim() : '',
       categories:      {},
       // Anything pulled from a file is always tagged 'imported' — we ignore any
@@ -397,8 +408,11 @@ function parseSummarySheet(ws, periodKey, defaultSource) {
       source:          defaultSource || 'imported',
     };
     if (totalOverride > 0) record.totalRevenue = totalOverride;
-    // The monthly record schema has a `foodCost` field; preserve it on import.
-    if (periodKey === 'month' && foodCostVal > 0) record.foodCost = foodCostVal;
+    // Preserve the Food Cost column on both daily and monthly imports. The
+    // monthly record uses this field directly; for daily records, consumers
+    // (Dashboard, DailySummaryTable) fall back to it when the live
+    // useFoodCostStore mapping has no entry for that date.
+    if (foodCostVal > 0) record.foodCost = foodCostVal;
     records.push(record);
   }
   return records;
