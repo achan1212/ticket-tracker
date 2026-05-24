@@ -300,7 +300,7 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
       {filtered.map(day => (
         <div key={day.date} className="day-card">
           <div className="day-card-header"
-            onClick={() => editingDate !== day.date && setEditingDate(editingDate === day.date ? null : day.date)}>
+            onClick={() => setEditingDate(editingDate === day.date ? null : day.date)}>
             <div className="day-date-col">
               <span className="day-date">{formatDate(day.date)}</span>
               <div className="day-type-pills">
