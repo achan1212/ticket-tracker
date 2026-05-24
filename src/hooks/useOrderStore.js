@@ -47,6 +47,8 @@ export function useOrderStore() {
     });
   }, [setDays]);
 
+  const clearAll = useCallback(() => setDays({}), [setDays]);
+
   // Sorted array descending for display. A manual `totalRevenue` field, when
   // set, overrides the delivery+pickup sum — same semantics as the monthly
   // record, so users can record a day's bottom-line total even when the
@@ -66,5 +68,5 @@ export function useOrderStore() {
     })
     .sort((a, b) => b.date.localeCompare(a.date));
 
-  return { days, upsertDay, removeDay, dailySummary };
+  return { days, upsertDay, removeDay, clearAll, dailySummary };
 }

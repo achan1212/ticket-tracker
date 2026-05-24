@@ -7,19 +7,38 @@ const PLATFORMS = {
 };
 
 const BASE_COLS = [
-  { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 12 },
-  { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 14 },
-  { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 },
+  { wch: 14 }, // period
+  { wch: 16 }, // Total Revenue
+  { wch: 18 }, // Total Revenue (Manual)
+  { wch: 14 }, // Total Orders
+  { wch: 12 }, // Avg/Order
+  { wch: 14 }, // Food Cost
+  { wch: 12 }, // Food Cost %
+  { wch: 18 }, { wch: 16 }, // delivery
+  { wch: 16 }, { wch: 14 }, // pickup
+  { wch: 18 }, { wch: 18 }, { wch: 16 }, // platform rev
+  { wch: 16 }, { wch: 16 }, { wch: 16 }, // platform orders
 ];
 
-function buildSummarySheet(records, periodKey, periodLabel, exportedAt) {
+function effectiveRevenue(r) {
+  const breakdown = (r.deliveryRevenue || 0) + (r.pickupRevenue || 0);
+  const override  = r.totalRevenue || 0;
+  return override > 0 ? override : breakdown;
+}
+
+function buildSummarySheet(records, periodKey, periodLabel, exportedAt, foodCostMap = {}) {
   const allCategories = [
     ...new Set(records.flatMap(r => Object.keys(r.categories || {})))
   ].sort();
 
   const headers = [
     periodLabel,
-    'Total Revenue', 'Total Orders', 'Avg/Order',
+    'Total Revenue',
+    'Total Revenue (Manual)',
+    'Total Orders',
+    'Avg/Order',
+    'Food Cost',
+    'Food Cost %',
     'Delivery Revenue', 'Delivery Orders',
     'Pickup Revenue', 'Pickup Orders',
     'DoorDash Revenue', 'Uber Eats Revenue', 'Grubhub Revenue',
@@ -29,12 +48,20 @@ function buildSummarySheet(records, periodKey, periodLabel, exportedAt) {
   ];
 
   const dataRows = records.map(r => {
-    const total  = (r.deliveryRevenue || 0) + (r.pickupRevenue || 0);
-    const orders = (r.deliveryOrders  || 0) + (r.pickupOrders  || 0);
-    const cats   = r.categories || {};
+    const total    = effectiveRevenue(r);
+    const override = (r.totalRevenue || 0) > 0 ? r.totalRevenue : '';
+    const orders   = (r.deliveryOrders || 0) + (r.pickupOrders || 0);
+    const cats     = r.categories || {};
+    const foodCost = foodCostMap[r[periodKey]] ?? (r.foodCost || 0);
+    const foodPct  = (foodCost > 0 && total > 0) ? foodCost / total : '';
     return [
       r[periodKey],
-      total, orders, orders > 0 ? total / orders : 0,
+      total,
+      override,
+      orders,
+      orders > 0 ? total / orders : 0,
+      foodCost || '',
+      foodPct,
       r.deliveryRevenue || 0, r.deliveryOrders || 0,
       r.pickupRevenue   || 0, r.pickupOrders   || 0,
       r.doordash || 0, r.ubereats || 0, r.grubhub || 0,
@@ -45,11 +72,16 @@ function buildSummarySheet(records, periodKey, periodLabel, exportedAt) {
   });
 
   const sumField = (k) => records.reduce((s, r) => s + (r[k] || 0), 0);
+  const sumEffectiveRevenue = records.reduce((s, r) => s + effectiveRevenue(r), 0);
+  const sumFoodCost = records.reduce((s, r) => s + (foodCostMap[r[periodKey]] ?? r.foodCost ?? 0), 0);
   const totalsRow = [
     'TOTAL',
-    sumField('deliveryRevenue') + sumField('pickupRevenue'),
-    sumField('deliveryOrders')  + sumField('pickupOrders'),
+    sumEffectiveRevenue,
     '',
+    sumField('deliveryOrders') + sumField('pickupOrders'),
+    '',
+    sumFoodCost || '',
+    (sumFoodCost > 0 && sumEffectiveRevenue > 0) ? sumFoodCost / sumEffectiveRevenue : '',
     sumField('deliveryRevenue'), sumField('deliveryOrders'),
     sumField('pickupRevenue'),   sumField('pickupOrders'),
     sumField('doordash'), sumField('ubereats'), sumField('grubhub'),
@@ -83,77 +115,198 @@ function buildSummarySheet(records, periodKey, periodLabel, exportedAt) {
     }
   }
 
+  // Format Food Cost % column (col index 6 = G) as percentage
+  for (let i = 0; i < records.length + 1; i++) {
+    const cellAddr = utils.encode_cell({ r: 3 + i, c: 6 });
+    if (ws[cellAddr] && typeof ws[cellAddr].v === 'number') {
+      ws[cellAddr].z = '0.0%';
+    }
+  }
+  // Totals row pct cell (after blank row separator)
+  const totalsRowIdx = 3 + records.length + 1;
+  const totalsPctAddr = utils.encode_cell({ r: totalsRowIdx, c: 6 });
+  if (ws[totalsPctAddr] && typeof ws[totalsPctAddr].v === 'number') {
+    ws[totalsPctAddr].z = '0.0%';
+  }
+
+  return ws;
+}
+
+function buildFoodCostDetailSheet(groups, exportedAt) {
+  const headers = [
+    'Group Date', 'Source File', 'Status', 'Item', 'Unit Cost', 'Qty', 'Subtotal', 'Imported At',
+  ];
+  const rows = [];
+  for (const g of groups) {
+    for (const it of (g.items || [])) {
+      const qty = Number(it.quantity) || 0;
+      const cost = Number(it.cost) || 0;
+      rows.push([
+        g.date || '',
+        g.name || it.sourceFile || '',
+        g.status || '',
+        it.name || '',
+        cost,
+        qty,
+        cost * qty,
+        g.importedAt ? new Date(g.importedAt).toLocaleString('en-US') : '',
+      ]);
+    }
+    if (!g.items || g.items.length === 0) {
+      rows.push([
+        g.date || '',
+        g.name || '',
+        g.status || '',
+        '(no items)',
+        '', '', '',
+        g.importedAt ? new Date(g.importedAt).toLocaleString('en-US') : '',
+      ]);
+    }
+  }
+
+  const ws = utils.aoa_to_sheet([
+    [`Exported: ${exportedAt}`],
+    [],
+    headers,
+    ...rows,
+  ]);
+  ws['!cols'] = [
+    { wch: 14 }, { wch: 26 }, { wch: 12 }, { wch: 32 },
+    { wch: 12 }, { wch: 8 }, { wch: 14 }, { wch: 20 },
+  ];
+  // Force date column (col 0) to text so Excel doesn't auto-convert ISO dates
+  for (let i = 0; i < rows.length; i++) {
+    const cellAddr = utils.encode_cell({ r: 3 + i, c: 0 });
+    if (ws[cellAddr]) {
+      ws[cellAddr].t = 's';
+      ws[cellAddr].v = String(ws[cellAddr].v);
+    }
+  }
+  return ws;
+}
+
+function buildPLTargetsSheet(plTargets, exportedAt) {
+  const t = plTargets || {};
+  const rows = [
+    [`Exported: ${exportedAt}`],
+    [],
+    ['Setting', 'Value (%)'],
+    ['Labor',    Number(t.laborPct)    || 0],
+    ['Overhead', Number(t.overheadPct) || 0],
+    ['Other',    Number(t.otherPct)    || 0],
+  ];
+  const ws = utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 16 }, { wch: 14 }];
   return ws;
 }
 
 /**
- * Export daily and monthly records to a multi-sheet .xlsx file.
- * @param {Array}  dailySummary  - day records from useOrderStore
- * @param {Object} deliveryRates - platform rate overrides keyed by platform key
- * @param {Object} months        - month records from useMonthlyStore (keyed by 'YYYY-MM')
+ * Export every persisted store to a multi-sheet .xlsx file.
+ *
+ * @param {Object} opts
+ * @param {Array}  [opts.dailySummary]   - day records (from useOrderStore.dailySummary)
+ * @param {Object} [opts.deliveryRates]  - per-platform rate overrides
+ * @param {Object} [opts.months]         - month records keyed by 'YYYY-MM'
+ * @param {Object} [opts.foodCostByDay]  - 'YYYY-MM-DD' → number
+ * @param {Object} [opts.foodCostByMonth]- 'YYYY-MM' → number
+ * @param {Array}  [opts.foodCostGroups] - raw food cost import groups
+ * @param {Object} [opts.plTargets]      - { laborPct, overheadPct, otherPct }
  */
-export function exportToXlsx(dailySummary = [], deliveryRates = {}, months = {}) {
+export function exportToXlsx(opts = {}) {
+  const {
+    dailySummary    = [],
+    deliveryRates   = {},
+    months          = {},
+    foodCostByDay   = {},
+    foodCostByMonth = {},
+    foodCostGroups  = [],
+    plTargets       = null,
+  } = opts;
+
   const sortedDaily   = [...dailySummary].sort((a, b) => a.date.localeCompare(b.date));
   const sortedMonthly = Object.values(months || {}).sort((a, b) => a.month.localeCompare(b.month));
 
-  if (sortedDaily.length === 0 && sortedMonthly.length === 0) return;
+  const hasAnything =
+    sortedDaily.length > 0 ||
+    sortedMonthly.length > 0 ||
+    foodCostGroups.length > 0 ||
+    plTargets != null;
+  if (!hasAnything) return;
 
   const wb = utils.book_new();
   const exportedAt = new Date().toLocaleString('en-US');
 
   if (sortedDaily.length > 0) {
-    utils.book_append_sheet(wb, buildSummarySheet(sortedDaily, 'date', 'Date', exportedAt), 'Daily Summary');
+    utils.book_append_sheet(
+      wb,
+      buildSummarySheet(sortedDaily, 'date', 'Date', exportedAt, foodCostByDay),
+      'Daily Summary'
+    );
   }
   if (sortedMonthly.length > 0) {
-    utils.book_append_sheet(wb, buildSummarySheet(sortedMonthly, 'month', 'Month', exportedAt), 'Monthly Summary');
+    utils.book_append_sheet(
+      wb,
+      buildSummarySheet(sortedMonthly, 'month', 'Month', exportedAt, foodCostByMonth),
+      'Monthly Summary'
+    );
   }
 
   // Delivery Fees — aggregate from both daily and monthly platform revenue
   const allRecords = [...sortedDaily, ...sortedMonthly];
-  const deliveryRows = [
-    [`Exported: ${exportedAt}`],
-    [],
-    [
-      'Platform', 'Gross Revenue', 'Orders',
-      'Commission %', 'Processing %', 'Flat Fee/Order', 'Marketing %',
-      'Total Commission', 'Total Processing', 'Total Flat Fees', 'Total Marketing',
-      'Total Deductions', 'Net Revenue', 'Effective Rate %', 'You Keep %',
-    ],
-    ...['doordash', 'ubereats', 'grubhub'].map(key => {
-      const defaults = PLATFORMS[key];
-      const rates = deliveryRates[key] || defaults;
-      const rev    = allRecords.reduce((s, r) => s + (r[key] || 0), 0);
-      const orders = allRecords.reduce((s, r) => s + (r[`${key}Orders`] || 0), 0);
-      const commAmt = rev * (rates.commissionPct / 100);
-      const procAmt = rev * (rates.paymentProcessingPct / 100);
-      const flatAmt = (rates.flatFeePerOrder || 0) * orders;
-      const mktAmt  = rev * ((rates.marketingPct || 0) / 100);
-      const total   = commAmt + procAmt + flatAmt + mktAmt;
-      const net     = rev - total;
-      const effRate = rev > 0 ? total / rev : 0;
-      return [
-        defaults.name, rev, orders,
-        rates.commissionPct / 100,
-        rates.paymentProcessingPct / 100,
-        rates.flatFeePerOrder || 0,
-        (rates.marketingPct || 0) / 100,
-        commAmt, procAmt, flatAmt, mktAmt,
-        total, net, effRate, 1 - effRate,
-      ];
-    }),
-  ];
-  const wsDelivery = utils.aoa_to_sheet(deliveryRows);
-  wsDelivery['!cols'] = [
-    { wch: 14 }, { wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 14 },
-    { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 12 },
-  ];
-  ['D', 'E', 'G', 'N', 'O'].forEach(col => {
-    for (let r = 4; r <= 6; r++) {
-      const cell = `${col}${r}`;
-      if (wsDelivery[cell]) wsDelivery[cell].z = '0.0%';
-    }
-  });
-  utils.book_append_sheet(wb, wsDelivery, 'Delivery Fees');
+  if (allRecords.length > 0) {
+    const deliveryRows = [
+      [`Exported: ${exportedAt}`],
+      [],
+      [
+        'Platform', 'Gross Revenue', 'Orders',
+        'Commission %', 'Processing %', 'Flat Fee/Order', 'Marketing %',
+        'Total Commission', 'Total Processing', 'Total Flat Fees', 'Total Marketing',
+        'Total Deductions', 'Net Revenue', 'Effective Rate %', 'You Keep %',
+      ],
+      ...['doordash', 'ubereats', 'grubhub'].map(key => {
+        const defaults = PLATFORMS[key];
+        const rates = deliveryRates[key] || defaults;
+        const rev    = allRecords.reduce((s, r) => s + (r[key] || 0), 0);
+        const orders = allRecords.reduce((s, r) => s + (r[`${key}Orders`] || 0), 0);
+        const commAmt = rev * (rates.commissionPct / 100);
+        const procAmt = rev * (rates.paymentProcessingPct / 100);
+        const flatAmt = (rates.flatFeePerOrder || 0) * orders;
+        const mktAmt  = rev * ((rates.marketingPct || 0) / 100);
+        const total   = commAmt + procAmt + flatAmt + mktAmt;
+        const net     = rev - total;
+        const effRate = rev > 0 ? total / rev : 0;
+        return [
+          defaults.name, rev, orders,
+          rates.commissionPct / 100,
+          rates.paymentProcessingPct / 100,
+          rates.flatFeePerOrder || 0,
+          (rates.marketingPct || 0) / 100,
+          commAmt, procAmt, flatAmt, mktAmt,
+          total, net, effRate, 1 - effRate,
+        ];
+      }),
+    ];
+    const wsDelivery = utils.aoa_to_sheet(deliveryRows);
+    wsDelivery['!cols'] = [
+      { wch: 14 }, { wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 14 },
+      { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 12 },
+    ];
+    ['D', 'E', 'G', 'N', 'O'].forEach(col => {
+      for (let r = 4; r <= 6; r++) {
+        const cell = `${col}${r}`;
+        if (wsDelivery[cell]) wsDelivery[cell].z = '0.0%';
+      }
+    });
+    utils.book_append_sheet(wb, wsDelivery, 'Delivery Fees');
+  }
+
+  if (foodCostGroups.length > 0) {
+    utils.book_append_sheet(wb, buildFoodCostDetailSheet(foodCostGroups, exportedAt), 'Food Cost Detail');
+  }
+
+  if (plTargets) {
+    utils.book_append_sheet(wb, buildPLTargetsSheet(plTargets, exportedAt), 'P&L Targets');
+  }
 
   const dateSlug = new Date().toISOString().slice(0, 10);
   writeFile(wb, `tracker-export-${dateSlug}.xlsx`);
@@ -195,19 +348,21 @@ function parseSummarySheet(ws, periodKey, defaultSource) {
   const col = (exact) => headers.indexOf(exact);
   const has = (a, b) => headers.findIndex(h => h.includes(a) && h.includes(b));
 
-  const delRevCol   = col('delivery revenue');
-  const delOrdCol   = col('delivery orders');
-  const pkRevCol    = col('pickup revenue');
-  const pkOrdCol    = col('pickup orders');
-  const totalRevCol = col('total revenue');
-  const totalOrdCol = col('total orders');
-  const ddRevCol    = has('doordash', 'revenue');
-  const ueRevCol    = has('uber', 'revenue');
-  const ghRevCol    = has('grubhub', 'revenue');
-  const ddOrdCol    = has('doordash', 'orders');
-  const ueOrdCol    = has('uber', 'orders');
-  const ghOrdCol    = has('grubhub', 'orders');
-  const notesCol    = col('notes');
+  const delRevCol    = col('delivery revenue');
+  const delOrdCol    = col('delivery orders');
+  const pkRevCol     = col('pickup revenue');
+  const pkOrdCol     = col('pickup orders');
+  const totalRevCol  = col('total revenue');
+  const totalManCol  = has('total revenue', 'manual');
+  const totalOrdCol  = col('total orders');
+  const foodCostCol  = headers.findIndex(h => h === 'food cost'); // exact match — avoid "food cost %"
+  const ddRevCol     = has('doordash', 'revenue');
+  const ueRevCol     = has('uber', 'revenue');
+  const ghRevCol     = has('grubhub', 'revenue');
+  const ddOrdCol     = has('doordash', 'orders');
+  const ueOrdCol     = has('uber', 'orders');
+  const ghOrdCol     = has('grubhub', 'orders');
+  const notesCol     = col('notes');
 
   const periodRegex = periodKey === 'date' ? /^\d{4}-\d{2}-\d{2}$/ : /^\d{4}-\d{2}$/;
 
@@ -219,7 +374,10 @@ function parseSummarySheet(ws, periodKey, defaultSource) {
     const period = coercePeriod(row[0], periodKey);
     if (!period || !periodRegex.test(period)) continue;
 
-    records.push({
+    const totalOverride = totalManCol >= 0 ? parseFloat(row[totalManCol]) || 0 : 0;
+    const foodCostVal   = foodCostCol >= 0 ? parseFloat(row[foodCostCol]) || 0 : 0;
+
+    const record = {
       [periodKey]:     period,
       deliveryRevenue: parseFloat(delRevCol >= 0 ? row[delRevCol] : row[totalRevCol]) || 0,
       pickupRevenue:   parseFloat(pkRevCol  >= 0 ? row[pkRevCol]  : 0) || 0,
@@ -237,7 +395,11 @@ function parseSummarySheet(ws, periodKey, defaultSource) {
       // Source column the file may carry, since past exports wrote "Manual" there
       // and that would re-introduce the manual badge after a round-trip.
       source:          defaultSource || 'imported',
-    });
+    };
+    if (totalOverride > 0) record.totalRevenue = totalOverride;
+    // The monthly record schema has a `foodCost` field; preserve it on import.
+    if (periodKey === 'month' && foodCostVal > 0) record.foodCost = foodCostVal;
+    records.push(record);
   }
   return records;
 }

@@ -171,10 +171,65 @@
   color-scheme: dark;
 }
 
+/* Danger zone — clear all data */
+.sheet-danger {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  flex-wrap: wrap;
+}
+
+.sheet-danger-text {
+  flex: 1;
+  min-width: 200px;
+}
+
+.sheet-danger-label {
+  font-size: 0.88rem;
+  color: var(--danger);
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sheet-danger-sub {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border: 1px solid var(--danger);
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.btn-danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* Mobile: Sheets */
 @media (max-width: 640px) {
   .sheet-section { flex-direction: column; align-items: flex-start; gap: 1rem; }
   .sheet-section .btn { width: 100%; text-align: center; }
   .sheet-date-row { flex-direction: column; align-items: flex-start; gap: 1rem; }
   .date-input { width: 100%; flex: none; }
+  .sheet-danger { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .sheet-danger .btn-danger { width: 100%; text-align: center; }
 }

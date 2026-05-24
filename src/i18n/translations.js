@@ -420,6 +420,13 @@ export const translations = {
     howTo3: 'Both sheets include an export timestamp',
     howTo4: 'To import back: download from Google Sheets as',
     howTo4b: ', then click Import — all daily records are restored',
+
+    // Clear all data (danger zone)
+    clearAllLabel: 'Danger Zone',
+    clearAllSub: 'Permanently delete every daily record, monthly record, food cost import, and P&L target. Export first if you want a backup — this cannot be undone.',
+    clearAllBtn: 'Clear all data',
+    clearAllConfirm: 'This will permanently delete ALL data: daily records, monthly records, food cost imports, and P&L targets. Export first if you want a backup. Continue?',
+    clearAllConfirm2: 'Are you absolutely sure? This cannot be undone.',
   },
 
   zh: {
@@ -843,6 +850,13 @@ export const translations = {
     howTo3: '两个表格均包含导出时间戳',
     howTo4: '如需导入：从Google表格下载为',
     howTo4b: '，然后点击导入 — 所有每日记录将被恢复',
+
+    // 清除所有数据
+    clearAllLabel: '危险操作',
+    clearAllSub: '永久删除所有每日记录、月度记录、食材成本导入和损益目标。建议先导出以备份 — 此操作无法撤销。',
+    clearAllBtn: '清除所有数据',
+    clearAllConfirm: '此操作将永久删除所有数据：每日记录、月度记录、食材成本导入和损益目标。如需备份请先导出。是否继续？',
+    clearAllConfirm2: '确定要继续吗？此操作无法撤销。',
   },
 
   es: {
@@ -1266,6 +1280,13 @@ export const translations = {
     howTo3: 'Ambas hojas incluyen una marca de tiempo de exportación',
     howTo4: 'Para importar de vuelta: descarga desde Google Sheets como',
     howTo4b: ', luego haz clic en Importar — todos los registros diarios se restauran',
+
+    // Zona de peligro — limpiar todos los datos
+    clearAllLabel: 'Zona de Peligro',
+    clearAllSub: 'Elimina permanentemente todos los registros diarios, mensuales, importaciones de costos y objetivos de P&G. Exporta primero si quieres una copia — esto no se puede deshacer.',
+    clearAllBtn: 'Borrar todos los datos',
+    clearAllConfirm: 'Esto eliminará permanentemente TODOS los datos: registros diarios, mensuales, importaciones de costos y objetivos de P&G. Exporta primero si quieres una copia. ¿Continuar?',
+    clearAllConfirm2: '¿Estás absolutamente seguro? Esto no se puede deshacer.',
   }
 };
 

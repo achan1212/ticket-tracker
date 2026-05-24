@@ -3,7 +3,28 @@ import { exportToXlsx, importFromXlsx } from '@utils/sheetIO';
 import { useLang } from '../../i18n/LangContext.jsx';
 import './SheetPanel.css';
 
-export default function SheetPanel({ dailySummary, months, onImport }) {
+// Read pl-targets straight from localStorage so the export always picks up
+// the latest value, even if the user just edited it in the P&L tab.
+function readPLTargets() {
+  try {
+    const raw = localStorage.getItem('ticket-tracker:pl-targets');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && parsed.data ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+export default function SheetPanel({
+  dailySummary,
+  months,
+  foodCostByDay = {},
+  foodCostByMonth = {},
+  foodCostGroups = [],
+  onImport,
+  onClearAll,
+}) {
   const importRef = useRef(null);
   const [importing, setImporting]     = useState(false);
   const [importError, setImportError] = useState('');
@@ -11,11 +32,29 @@ export default function SheetPanel({ dailySummary, months, onImport }) {
   const { t } = useLang();
 
   const monthlyCount = Object.keys(months || {}).length;
-  const isEmpty = dailySummary.length === 0 && monthlyCount === 0;
+  const isEmpty = dailySummary.length === 0 && monthlyCount === 0 && foodCostGroups.length === 0;
 
   const handleExport = () => {
     if (isEmpty) return;
-    exportToXlsx(dailySummary, {}, months);
+    exportToXlsx({
+      dailySummary,
+      deliveryRates: {},
+      months,
+      foodCostByDay,
+      foodCostByMonth,
+      foodCostGroups,
+      plTargets: readPLTargets(),
+    });
+  };
+
+  const handleClearAll = () => {
+    if (!onClearAll) return;
+    const msg = t.clearAllConfirm ||
+      'This will permanently delete ALL data: daily records, monthly records, food cost imports, and P&L targets. Export first if you want a backup. Continue?';
+    if (!window.confirm(msg)) return;
+    // Double-confirm because this is irreversible
+    if (!window.confirm(t.clearAllConfirm2 || 'Are you absolutely sure? This cannot be undone.')) return;
+    onClearAll();
   };
 
   const handleImportFile = async (file) => {
@@ -106,6 +145,23 @@ export default function SheetPanel({ dailySummary, months, onImport }) {
           <li>{t.howTo3}</li>
           <li>{t.howTo4} <strong>.xlsx</strong>{t.howTo4b}</li>
         </ol>
+      </div>
+
+      {/* DANGER ZONE — clear all data */}
+      <div className="sheet-danger">
+        <div className="sheet-danger-text">
+          <p className="sheet-danger-label">{t.clearAllLabel || 'Danger Zone'}</p>
+          <p className="sheet-danger-sub">
+            {t.clearAllSub || 'Wipes every daily, monthly, food cost, and P&L target you have stored. Make sure to export first if you want a backup.'}
+          </p>
+        </div>
+        <button
+          className="btn btn-danger"
+          onClick={handleClearAll}
+          disabled={isEmpty}
+        >
+          {t.clearAllBtn || 'Clear all data'}
+        </button>
       </div>
     </div>
   );

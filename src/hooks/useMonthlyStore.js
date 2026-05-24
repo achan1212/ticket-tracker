@@ -32,5 +32,7 @@ export function useMonthlyStore() {
     });
   }, [setMonths]);
 
-  return { months, upsertMonth, removeMonth };
+  const clearAll = useCallback(() => setMonths({}), [setMonths]);
+
+  return { months, upsertMonth, removeMonth, clearAll };
 }

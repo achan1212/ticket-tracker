@@ -25,9 +25,21 @@ const ProfitLossTab       = lazy(() => import('@components/ProfitLossTab/ProfitL
 const TAB_KEYS = getAllTabKeys();
 
 export default function App() {
-  const { days, upsertDay, removeDay, dailySummary } = useOrderStore();
-  const { months, upsertMonth, removeMonth } = useMonthlyStore();
-  const { foodCostByDay, foodCostByMonth } = useFoodCostStore();
+  const { days, upsertDay, removeDay, clearAll: clearAllDays, dailySummary } = useOrderStore();
+  const { months, upsertMonth, removeMonth, clearAll: clearAllMonths } = useMonthlyStore();
+  const { groups: foodCostGroups, foodCostByDay, foodCostByMonth, clearAll: clearAllFoodCost } = useFoodCostStore();
+
+  const handleClearAllData = () => {
+    clearAllDays();
+    clearAllMonths();
+    clearAllFoodCost();
+    try { localStorage.removeItem('ticket-tracker:pl-targets'); } catch { /* quota / private browsing */ }
+    // Reload so every component re-reads from a clean localStorage. The stores
+    // above already cleared their in-memory state, but child components like
+    // ProfitLossTab read their own slice via useLocalStore and would otherwise
+    // keep stale in-memory copies until next reload.
+    setTimeout(() => window.location.reload(), 50);
+  };
   const { lang, setLang, LANGUAGES, t } = useLang();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
@@ -174,10 +186,14 @@ export default function App() {
             <SheetPanel
               dailySummary={dailySummary}
               months={months}
+              foodCostByDay={foodCostByDay}
+              foodCostByMonth={foodCostByMonth}
+              foodCostGroups={foodCostGroups}
               onImport={({ days, months: importedMonths }) => {
                 days.forEach(d => upsertDay(d.date, d));
                 importedMonths.forEach(m => upsertMonth(m.month, m));
               }}
+              onClearAll={handleClearAllData}
             />
           )}
         </Suspense>
