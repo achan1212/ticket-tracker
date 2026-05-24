@@ -314,6 +314,9 @@ export const translations = {
     emptyDailyPre: 'No daily records yet. Click',
     emptyDailySuffix: 'to enter today\'s sales.',
     addTodayBtn: '+ Add Today',
+    loadDemoBtn: 'Load Demo Data',
+    loadDemoConfirm: 'Load 90 days of demo data? This will be added to your records.',
+    loadDemoSuccess: 'Demo data loaded!',
 
     // Monthly Summary Table
     addMonthBtn: '+ Add Month',
@@ -711,6 +714,9 @@ export const translations = {
     emptyDailyPre: '暂无每日记录，点击',
     emptyDailySuffix: '以录入今日销售数据。',
     addTodayBtn: '+ 添加今天',
+    loadDemoBtn: '加载演示数据',
+    loadDemoConfirm: '加载90天的演示数据？这将添加到您的记录中。',
+    loadDemoSuccess: '演示数据已加载!',
 
     // Monthly Summary Table
     addMonthBtn: '+ 添加月份',
@@ -1108,6 +1114,9 @@ export const translations = {
     emptyDailyPre: 'Aún no hay registros diarios. Haz clic en',
     emptyDailySuffix: 'para ingresar las ventas de hoy.',
     addTodayBtn: '+ Agregar Hoy',
+    loadDemoBtn: 'Cargar Datos de Demo',
+    loadDemoConfirm: '¿Cargar 90 días de datos de demostración? Se añadirán a tus registros.',
+    loadDemoSuccess: '¡Datos de demostración cargados!',
 
     // Monthly Summary Table
     addMonthBtn: '+ Agregar Mes',

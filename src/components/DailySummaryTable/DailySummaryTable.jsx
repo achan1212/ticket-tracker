@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { formatCurrency } from '@utils/helpers';
 import PlatformBreakdown from '@components/PlatformBreakdown/PlatformBreakdown';
 import { useLang } from '../../i18n/LangContext.jsx';
+import { generateDemoDays } from '@utils/demoData';
 import './DailySummaryTable.css';
 
 function formatDate(iso) {
@@ -211,6 +212,14 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
   const [showAddForm, setShowAddForm] = useState(false);
   const [filterType, setFilterType]   = useState('all');
 
+  const handleLoadDemo = () => {
+    const confirmed = window.confirm(t.loadDemoConfirm || 'Load 90 days of demo data? This will be added to your records.');
+    if (!confirmed) return;
+    const demoData = generateDemoDays();
+    demoData.forEach(day => onUpsertDay(day.date, day));
+    alert(t.loadDemoSuccess || 'Demo data loaded!');
+  };
+
   const handleAddSave = (data) => {
     if (!addingDate) return;
     onUpsertDay(addingDate, data);
@@ -275,10 +284,16 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
       {!showAddForm && filtered.length === 0 && (
         <div className="ds-empty">
           <p>{t.emptyDailyPre} <strong>{t.addDayBtn}</strong> {t.emptyDailySuffix}</p>
-          <button className="btn btn-primary"
-            onClick={() => { setAddingDate(todayISO()); setShowAddForm(true); }}>
-            {t.addTodayBtn}
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button className="btn btn-primary"
+              onClick={() => { setAddingDate(todayISO()); setShowAddForm(true); }}>
+              {t.addTodayBtn}
+            </button>
+            <button className="btn btn-secondary"
+              onClick={handleLoadDemo}>
+              {t.loadDemoBtn || 'Load Demo Data'}
+            </button>
+          </div>
         </div>
       )}
 
