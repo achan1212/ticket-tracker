@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLang } from '../../i18n/LangContext.jsx';
 import { NAV_GROUPS, getGroupKeyForTab } from './navConfig.js';
 
 export default function MobileDrawer({ open, activeTab, onClose, onNavigate }) {
   const { t } = useLang();
   const activeGroupKey = getGroupKeyForTab(activeTab);
+  const drawerRef = useRef(null);
 
   // Esc closes; body scroll lock prevents iOS rubber-band while open.
   useEffect(() => {
@@ -19,6 +20,29 @@ export default function MobileDrawer({ open, activeTab, onClose, onNavigate }) {
     };
   }, [open, onClose]);
 
+  // Focus trap: move focus into the drawer on open and cycle Tab/Shift-Tab within it.
+  useEffect(() => {
+    if (!open) return;
+    const drawer = drawerRef.current;
+    if (!drawer) return;
+    const focusable = Array.from(drawer.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter(el => !el.disabled);
+    const first = focusable[0];
+    const last  = focusable[focusable.length - 1];
+    first?.focus();
+    const trap = (e) => {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last?.focus(); }
+      } else {
+        if (document.activeElement === last)  { e.preventDefault(); first?.focus(); }
+      }
+    };
+    drawer.addEventListener('keydown', trap);
+    return () => drawer.removeEventListener('keydown', trap);
+  }, [open]);
+
   const handleSelect = (tabKey) => {
     onNavigate(tabKey);
     onClose();
@@ -32,7 +56,10 @@ export default function MobileDrawer({ open, activeTab, onClose, onNavigate }) {
         aria-hidden={!open}
       />
       <aside
+        ref={drawerRef}
         className={`nav-drawer ${open ? 'open' : ''}`}
+        role="dialog"
+        aria-modal="true"
         aria-hidden={!open}
         aria-label="Navigation"
       >

@@ -220,7 +220,7 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
 
     const monthlyPoints = Object.values(months)
       .filter(m => !dailyMonthKeys.has(m.month))
-      .filter(m => m.month + '-01' <= toDate && m.month + '-28' >= fromDate)
+      .filter(m => m.month <= toDate.slice(0, 7) && m.month >= fromDate.slice(0, 7))
       .map(m => {
         const revenue    = (m.deliveryRevenue || 0) + (m.pickupRevenue || 0);
         const orderCount = (m.deliveryOrders  || 0) + (m.pickupOrders  || 0);
@@ -344,7 +344,7 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
     const dailyMonthKeys = new Set(Object.keys(days).map(d => d.slice(0, 7)));
     Object.values(months)
       .filter(m => !dailyMonthKeys.has(m.month))
-      .filter(m => m.month + '-01' <= toDate && m.month + '-28' >= fromDate)
+      .filter(m => m.month <= toDate.slice(0, 7) && m.month >= fromDate.slice(0, 7))
       .forEach(addPlatforms);
 
     return Object.values(byPlatform).sort((a, b) => b.revenue - a.revenue);

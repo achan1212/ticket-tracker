@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { formatCurrency } from '@utils/helpers';
 import { useLang } from '../../i18n/LangContext.jsx';
 import Dropdown from '@components/ui/Dropdown.jsx';
@@ -60,10 +60,9 @@ export default function OperatingCostsTab({
   const fixedTotal      = fixedByMonth[selectedMonth] || 0;
   const total           = laborForMonth + fixedTotal;
 
-  // Sync the labor input whenever the selected month changes.
-  useMemo(() => {
-    setLaborInput(laborForMonth > 0 ? String(laborForMonth) : '');
-  }, [selectedMonth, laborForMonth]);
+  useEffect(() => {
+    setLaborInput(laborByMonth[selectedMonth] != null ? String(laborByMonth[selectedMonth]) : '');
+  }, [selectedMonth, laborByMonth]);
 
   const commitLabor = () => {
     setLaborForMonth(selectedMonth, parseFloat(laborInput) || 0);

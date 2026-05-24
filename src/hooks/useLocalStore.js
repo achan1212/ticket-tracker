@@ -71,10 +71,15 @@ function readFromStorage(key, version, initial, migrate) {
   }
 }
 
+let storageWarningFired = false;
+
 function writeToStorage(key, version, data) {
   try {
     localStorage.setItem(key, JSON.stringify({ v: version, data }));
   } catch {
-    /* quota / private browsing — value still lives in memory */
+    if (!storageWarningFired) {
+      storageWarningFired = true;
+      window.dispatchEvent(new CustomEvent('tt:storage-error'));
+    }
   }
 }

@@ -49,6 +49,13 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [storageWarning, setStorageWarning] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setStorageWarning(true);
+    window.addEventListener('tt:storage-error', handler);
+    return () => window.removeEventListener('tt:storage-error', handler);
+  }, []);
 
   const resolvedTab = getTabFromPath(location.pathname);
   const activeTab = resolvedTab && TAB_KEYS.includes(resolvedTab) ? resolvedTab : 'summary';
@@ -106,6 +113,17 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {storageWarning && (
+        <div className="storage-warning-banner" role="alert">
+          <span>{t.storageWarning}</span>
+          <button
+            className="storage-warning-dismiss"
+            onClick={() => setStorageWarning(false)}
+            aria-label={t.storageWarningDismiss}
+          >×</button>
+        </div>
+      )}
 
       <Navbar activeTab={activeTab} onNavigate={handleNavigate} />
       <MobileDrawer

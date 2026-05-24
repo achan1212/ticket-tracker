@@ -24,7 +24,8 @@ function computePL(month, dailySummary, months, foodCostByMonth, targets, laborB
   const manualRec = months[month];
   const dailyEntries = dailySummary.filter(d => d.date.startsWith(month));
   const dailyRevenue = dailyEntries.reduce((s, d) => s + d.revenue, 0);
-  const manualRevenue = manualRec
+  const hasDailyData = dailyEntries.length > 0;
+  const manualRevenue = (!hasDailyData && manualRec)
     ? (manualRec.totalRevenue > 0
       ? manualRec.totalRevenue
       : (manualRec.deliveryRevenue || 0) + (manualRec.pickupRevenue || 0))
