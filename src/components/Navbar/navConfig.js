@@ -23,6 +23,7 @@ export const NAV_GROUPS = [
     labelKey: 'navInsights',
     items: [
       { key: 'dashboard', labelKey: 'tabDashboard', icon: '📊' },
+      { key: 'pl',        labelKey: 'tabPL',        icon: '📈' },
       { key: 'delivery',  labelKey: 'tabDelivery',  icon: '🛵' },
       { key: 'analysis',  labelKey: 'tabAnalysis',  icon: '💰' },
       { key: 'menu',      labelKey: 'tabMenu',      icon: '🍽️' },

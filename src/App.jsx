@@ -20,6 +20,7 @@ const SheetPanel          = lazy(() => import('@components/SheetPanel/SheetPanel
 const ScannerTab          = lazy(() => import('@components/ScannerTab/ScannerTab'));
 const FoodCostTab         = lazy(() => import('@components/FoodCostTab/FoodCostTab.jsx'));
 const MenuAnalytics       = lazy(() => import('@components/MenuAnalytics/MenuAnalytics.jsx'));
+const ProfitLossTab       = lazy(() => import('@components/ProfitLossTab/ProfitLossTab.jsx'));
 
 const TAB_KEYS = getAllTabKeys();
 
@@ -124,6 +125,13 @@ export default function App() {
               days={days}
               months={months}
               foodCostByDay={foodCostByDay}
+              foodCostByMonth={foodCostByMonth}
+            />
+          )}
+          {activeTab === 'pl' && (
+            <ProfitLossTab
+              dailySummary={dailySummary}
+              months={months}
               foodCostByMonth={foodCostByMonth}
             />
           )}
