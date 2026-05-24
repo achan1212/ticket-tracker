@@ -50,22 +50,18 @@
   font-size: 1rem;
 }
 
-.pl-month-select {
+.pl-month-dd {
   flex: 1;
-  padding: 0.5rem 0.75rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  color: var(--text);
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: center;
+  display: block;
 }
 
-.pl-month-select:focus {
-  outline: none;
-  border-color: var(--accent);
+.pl-month-dd .ui-dropdown-trigger {
+  justify-content: center;
+}
+
+.pl-month-dd .ui-dropdown-value {
+  flex: 0 1 auto;
+  text-align: center;
 }
 
 /* ── P&L table ── */

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { formatCurrency } from '@utils/helpers';
 import { useLang } from '../../i18n/LangContext.jsx';
 import { useLocalStore } from '@hooks/useLocalStore.js';
+import Dropdown from '@components/ui/Dropdown.jsx';
 import './ProfitLossTab.css';
 
 function currentMonthISO() {
@@ -110,15 +111,13 @@ export default function ProfitLossTab({ dailySummary, months, foodCostByMonth = 
           onClick={() => setSelectedMonth(m => shiftMonth(m, -1))}
         >←</button>
 
-        <select
-          className="pl-month-select"
+        <Dropdown
+          className="pl-month-dd"
           value={selectedMonth}
-          onChange={e => setSelectedMonth(e.target.value)}
-        >
-          {monthOptions.map(m => (
-            <option key={m} value={m}>{formatMonthYear(m)}</option>
-          ))}
-        </select>
+          onChange={setSelectedMonth}
+          options={monthOptions.map(m => ({ value: m, label: formatMonthYear(m) }))}
+          ariaLabel={t.plMonthPicker || 'Select month'}
+        />
 
         <button
           className="btn btn-ghost btn-sm pl-nav-btn"
