@@ -355,10 +355,27 @@ export const translations = {
     dashWhereFrom: 'Where your orders come from',
     dashPlatformBreakdown: 'Platform Breakdown',
     dashOrdersRevPerChannel: 'Orders and revenue per channel',
+    dashFoodCost: 'Food Cost',
+    dashFoodCostPct: 'Food Cost %',
+    dashFoodCostTarget: 'Target 25–32%',
+    dashGrossProfit: 'Gross Profit',
+    dashMarginSuffix: 'margin',
+    dashFoodCostVsRev: 'Revenue vs Food Cost',
+    dashFoodCostVsRevSub: 'Gap between the lines is gross profit',
+    chartFoodCost: 'Food Cost',
     chartDelivery: 'Delivery',
     chartPickup: 'Pickup',
     chartOrders: 'Orders',
     chartAvgValue: 'Avg Value',
+
+    // Dashboard comparisons (WoW / MoM / YoY)
+    compareLabel: 'Compare:',
+    compareNone: 'None',
+    compareWow: 'WoW',
+    compareMom: 'MoM',
+    compareYoy: 'YoY',
+    comparePriorPeriod: 'Prior Period',
+    compareFoodCostPrior: 'Prior Food Cost',
 
     // Google Sheets
     exportLabel: 'Export to Google Sheets',
@@ -739,6 +756,23 @@ export const translations = {
     chartPickup: '自取',
     chartOrders: '订单',
     chartAvgValue: '均值',
+    dashFoodCost: '食材成本',
+    dashFoodCostPct: '食材成本占比',
+    dashFoodCostTarget: '目标区间 25–32%',
+    dashGrossProfit: '毛利润',
+    dashMarginSuffix: '毛利率',
+    dashFoodCostVsRev: '收入与食材成本',
+    dashFoodCostVsRevSub: '两条线之间的差距即为毛利润',
+    chartFoodCost: '食材成本',
+
+    // Dashboard comparisons (WoW / MoM / YoY)
+    compareLabel: '对比:',
+    compareNone: '无',
+    compareWow: '周同比',
+    compareMom: '月同比',
+    compareYoy: '年同比',
+    comparePriorPeriod: '对比期',
+    compareFoodCostPrior: '对比食材成本',
 
     // Google Sheets
     exportLabel: '导出到Google表格',
@@ -1119,6 +1153,23 @@ export const translations = {
     chartPickup: 'Recogida',
     chartOrders: 'Pedidos',
     chartAvgValue: 'Valor Prom.',
+    dashFoodCost: 'Costo de Alimentos',
+    dashFoodCostPct: '% Costo de Alimentos',
+    dashFoodCostTarget: 'Objetivo 25–32%',
+    dashGrossProfit: 'Beneficio Bruto',
+    dashMarginSuffix: 'margen',
+    dashFoodCostVsRev: 'Ingresos vs Costo de Alimentos',
+    dashFoodCostVsRevSub: 'La brecha entre las líneas es el beneficio bruto',
+    chartFoodCost: 'Costo de Alimentos',
+
+    // Dashboard comparisons (WoW / MoM / YoY)
+    compareLabel: 'Comparar:',
+    compareNone: 'Ninguno',
+    compareWow: 'SaS',
+    compareMom: 'MaM',
+    compareYoy: 'AaA',
+    comparePriorPeriod: 'Período Anterior',
+    compareFoodCostPrior: 'Costo Ant.',
 
     // Google Sheets
     exportLabel: 'Exportar a Google Sheets',

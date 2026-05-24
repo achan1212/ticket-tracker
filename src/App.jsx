@@ -119,7 +119,13 @@ export default function App() {
             />
           )}
           {activeTab === 'dashboard' && (
-            <Dashboard dailySummary={dailySummary} days={days} months={months} />
+            <Dashboard
+              dailySummary={dailySummary}
+              days={days}
+              months={months}
+              foodCostByDay={foodCostByDay}
+              foodCostByMonth={foodCostByMonth}
+            />
           )}
           {activeTab === 'delivery' && (
             <DeliveryAnalysis

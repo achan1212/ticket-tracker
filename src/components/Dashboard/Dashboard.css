@@ -24,6 +24,15 @@
 .range-pill:hover { color: var(--text); }
 .range-pill.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
 
+.db-compare-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.db-compare-label { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }
+
 /* Dashboard Cards */
 .dash-cards {
   display: grid;
