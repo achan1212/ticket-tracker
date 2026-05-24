@@ -27,7 +27,7 @@ const TAB_KEYS = getAllTabKeys();
 export default function App() {
   const { days, upsertDay, removeDay, clearAll: clearAllDays, dailySummary } = useOrderStore();
   const { months, upsertMonth, removeMonth, clearAll: clearAllMonths } = useMonthlyStore();
-  const { groups: foodCostGroups, foodCostByDay, foodCostByMonth, clearAll: clearAllFoodCost } = useFoodCostStore();
+  const { groups: foodCostGroups, foodCostByDay, foodCostByMonth, upsertGroup: upsertFoodCostGroup, clearAll: clearAllFoodCost } = useFoodCostStore();
 
   const handleClearAllData = () => {
     clearAllDays();
@@ -119,6 +119,7 @@ export default function App() {
               days={days}
               onUpsertDay={upsertDay}
               onRemoveDay={removeDay}
+              onUpsertFoodCostGroup={upsertFoodCostGroup}
               foodCostByDay={foodCostByDay}
             />
           )}

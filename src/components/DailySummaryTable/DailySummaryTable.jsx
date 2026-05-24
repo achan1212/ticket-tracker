@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { formatCurrency } from '@utils/helpers';
 import PlatformBreakdown from '@components/PlatformBreakdown/PlatformBreakdown';
 import { useLang } from '../../i18n/LangContext.jsx';
-import { generateDemoDays } from '@utils/demoData';
+import { generateDemoDays, generateDemoFoodCostGroups } from '@utils/demoData';
 import './DailySummaryTable.css';
 
 function formatDate(iso) {
@@ -205,7 +205,7 @@ function DayForm({ initial, onSave, onCancel }) {
   );
 }
 
-export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onRemoveDay, foodCostByDay = {} }) {
+export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onRemoveDay, onUpsertFoodCostGroup, foodCostByDay = {} }) {
   const { t } = useLang();
   const [editingDate, setEditingDate] = useState(null);
   const [addingDate, setAddingDate]   = useState('');
@@ -217,6 +217,10 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
     if (!confirmed) return;
     const demoData = generateDemoDays();
     demoData.forEach(day => onUpsertDay(day.date, day));
+    if (onUpsertFoodCostGroup) {
+      const demoFoodCost = generateDemoFoodCostGroups();
+      demoFoodCost.forEach(group => onUpsertFoodCostGroup(group));
+    }
     alert(t.loadDemoSuccess || 'Demo data loaded!');
   };
 

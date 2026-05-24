@@ -80,3 +80,84 @@ export function generateDemoDays() {
 
   return days;
 }
+
+// Generate ~26 demo food-cost import groups across the same 90-day window
+// the demo days cover. Models realistic restaurant ordering cadence: a
+// delivery every 3–4 days from a rotating supplier, 5–10 line items each,
+// summing to roughly 28% of demo revenue for the period.
+export function generateDemoFoodCostGroups() {
+  const SUPPLIERS = [
+    { label: 'Sysco',             fileBase: 'sysco-invoice' },
+    { label: 'US Foods',          fileBase: 'usfoods-invoice' },
+    { label: 'Restaurant Depot',  fileBase: 'restaurant-depot-receipt' },
+    { label: 'Performance Food',  fileBase: 'pfg-invoice' },
+  ];
+
+  // [name, min unit cost, max unit cost]
+  const CATALOG = [
+    ['Chicken Breast (10 lb)',    35, 50],
+    ['Ground Beef (5 lb)',        25, 35],
+    ['Mozzarella Cheese (5 lb)',  20, 30],
+    ['Pasta (10 lb case)',        12, 18],
+    ['Tomato Sauce (1 gal)',       8, 14],
+    ['Pizza Dough Mix (25 lb)',   25, 35],
+    ['Olive Oil (1 gal)',         30, 45],
+    ['Pepperoni (5 lb)',          30, 45],
+    ['Mushrooms (2 lb)',           8, 15],
+    ['Bell Peppers (5 lb)',       10, 18],
+    ['Yellow Onions (10 lb)',      8, 15],
+    ['Romaine Lettuce (case)',    15, 25],
+    ['Tomatoes (10 lb)',          15, 25],
+    ['Garlic (1 lb)',              5, 12],
+    ['Mixed Spices (assorted)',    8, 15],
+    ['Soda Syrup (5 gal BIB)',    40, 60],
+    ['Takeout Containers (250)',  35, 55],
+    ['Napkins (case)',            15, 25],
+    ['Burger Buns (8 dozen)',     20, 35],
+    ['Eggs (15 dozen)',           25, 40],
+    ['Parmesan (2 lb)',           18, 28],
+    ['Heavy Cream (1 gal)',       12, 18],
+  ];
+
+  const pick = (min, max) => min + Math.random() * (max - min);
+  const round2 = (n) => Math.round(n * 100) / 100;
+
+  const groups = [];
+  const now = new Date();
+  let i = 87;
+  let seq = 0;
+
+  while (i >= 0) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().slice(0, 10);
+
+    const supplier = SUPPLIERS[seq % SUPPLIERS.length];
+    const itemCount = 5 + Math.floor(Math.random() * 6); // 5–10 items
+
+    const shuffled = [...CATALOG].sort(() => Math.random() - 0.5).slice(0, itemCount);
+    const items = shuffled.map((c, idx) => ({
+      _uid: `demo-fc-${dateStr}-${idx}`,
+      name: c[0],
+      cost: round2(pick(c[1], c[2])),
+      quantity: 1 + Math.floor(Math.random() * 3), // 1–3 units
+      sourceFile: `${supplier.fileBase}-${dateStr}.pdf`,
+    }));
+
+    const filename = `${supplier.fileBase}-${dateStr}.pdf`;
+    groups.push({
+      id: `demo-fc-${dateStr}`,
+      name: filename,
+      date: dateStr,
+      status: 'done',
+      items,
+      importedAt: date.getTime(),
+      source: 'demo',
+    });
+
+    seq += 1;
+    i -= 3 + Math.floor(Math.random() * 2); // step 3–4 days
+  }
+
+  return groups;
+}
