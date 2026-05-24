@@ -98,6 +98,10 @@ export const translations = {
     foodCostStatLabel: 'Food %',
     foodCostStatTitle: 'Food cost',
     foodCostInterruptedError: 'Upload interrupted — re-upload this file.',
+    foodCostExportToMonthlyBtn: 'Export to Monthly Summary',
+    foodCostExportConfirmBtn: 'Push to Monthly Summary',
+    foodCostExportEmpty: 'No food cost imports cover this month.',
+    foodCostExportOverwriteHint: 'This month already has a food cost on record',
 
     // Results header
     items: 'item',
@@ -474,6 +478,10 @@ export const translations = {
     foodCostStatLabel: '食材%',
     foodCostStatTitle: '食材成本',
     foodCostInterruptedError: '上传中断 — 请重新上传该文件。',
+    foodCostExportToMonthlyBtn: '导出到月度汇总',
+    foodCostExportConfirmBtn: '推送到月度汇总',
+    foodCostExportEmpty: '本月没有可用的食材成本导入。',
+    foodCostExportOverwriteHint: '本月已有记录的食材成本',
 
     // Results header
     items: '个项目',
@@ -850,6 +858,10 @@ export const translations = {
     foodCostStatLabel: 'Comida %',
     foodCostStatTitle: 'Costo de alimentos',
     foodCostInterruptedError: 'Carga interrumpida — vuelve a subir este archivo.',
+    foodCostExportToMonthlyBtn: 'Exportar al Resumen Mensual',
+    foodCostExportConfirmBtn: 'Enviar al Resumen Mensual',
+    foodCostExportEmpty: 'No hay importaciones de costo de alimentos para este mes.',
+    foodCostExportOverwriteHint: 'Este mes ya tiene un costo de alimentos registrado',
 
     // Results header
     items: 'artículo',

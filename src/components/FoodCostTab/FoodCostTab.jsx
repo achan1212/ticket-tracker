@@ -19,10 +19,20 @@ function todayISO() {
   return `${y}-${m}-${day}`;
 }
 
-export default function FoodCostTab() {
+function currentMonthISO() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+export default function FoodCostTab({ onUpsertMonth, months = {} }) {
   const { t } = useLang();
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [exportMonth, setExportMonth] = useState(currentMonthISO());
+  const [exportFeedback, setExportFeedback] = useState(null);
   const {
     groups: fileGroups,
     upsertGroup,
@@ -117,6 +127,55 @@ export default function FoodCostTab() {
     0
   );
 
+  // Food cost spend for the month chosen in the export panel. Sums every
+  // done group whose user-set date falls inside YYYY-MM.
+  const exportMonthTotal = doneGroups
+    .filter(g => g.date && g.date.slice(0, 7) === exportMonth)
+    .reduce((s, g) => s + g.items.reduce((a, i) => a + i.cost * i.quantity, 0), 0);
+
+  const exportMonthGroupCount = doneGroups.filter(
+    g => g.date && g.date.slice(0, 7) === exportMonth
+  ).length;
+
+  const exportMonthItemCount = doneGroups
+    .filter(g => g.date && g.date.slice(0, 7) === exportMonth)
+    .reduce((s, g) => s + g.items.length, 0);
+
+  // Default the picker to the month of the most recent import the first time
+  // the panel is opened, so the common case (just imported a receipt → push)
+  // requires zero clicks. Only runs while the panel is closed.
+  const handleOpenExport = () => {
+    if (!showExport && doneGroups.length > 0) {
+      const latest = doneGroups
+        .filter(g => g.date)
+        .reduce((best, g) => (!best || g.date > best.date) ? g : best, null);
+      if (latest) setExportMonth(latest.date.slice(0, 7));
+    }
+    setShowExport(v => !v);
+    setExportFeedback(null);
+  };
+
+  const handleExportToMonthlySummary = () => {
+    setExportFeedback(null);
+    if (!onUpsertMonth) return;
+    if (!/^\d{4}-\d{2}$/.test(exportMonth)) {
+      setExportFeedback({ type: 'error', msg: t.exportInvalidDateError || 'Pick a valid month.' });
+      return;
+    }
+    if (exportMonthTotal <= 0) {
+      setExportFeedback({ type: 'error', msg: t.foodCostExportEmpty || 'No food cost imports cover this month.' });
+      return;
+    }
+    onUpsertMonth(exportMonth, {
+      foodCost: Math.round(exportMonthTotal * 100) / 100,
+      foodCostSource: 'imported',
+    });
+    setExportFeedback({
+      type: 'success',
+      msg: `${t.exportSuccessPrefix || 'Exported to'} ${t.tabMonthly || 'Monthly Summary'} (${exportMonth})`,
+    });
+  };
+
   const handleExport = () => {
     const rows = flattenForExport(doneGroups);
     if (rows.length === 0) return;
@@ -143,6 +202,15 @@ export default function FoodCostTab() {
         </div>
         {fileGroups.length > 0 && (
           <div className="fc-header-actions">
+            {onUpsertMonth && (
+              <button
+                className="btn btn-secondary"
+                onClick={handleOpenExport}
+                disabled={totalItems === 0}
+              >
+                {t.foodCostExportToMonthlyBtn || 'Export to Monthly Summary'}
+              </button>
+            )}
             <button className="btn btn-secondary" onClick={handleExport} disabled={totalItems === 0}>
               {t.exportCSV || 'Export CSV'}
             </button>
@@ -152,6 +220,77 @@ export default function FoodCostTab() {
           </div>
         )}
       </div>
+
+      {showExport && onUpsertMonth && (
+        <div className="fc-export-panel">
+          <div className="fc-export-row">
+            <div className="fc-export-field">
+              <label className="target-label">{t.labelMonth || 'Month'}</label>
+              <input
+                type="month"
+                className="form-input"
+                value={exportMonth}
+                onChange={(e) => setExportMonth(e.target.value)}
+                onClick={(e) => e.currentTarget.showPicker?.()}
+                max={currentMonthISO()}
+              />
+            </div>
+            <div className="fc-export-summary">
+              <span className="fc-export-pill">
+                <strong>{exportMonthGroupCount}</strong>{' '}
+                {exportMonthGroupCount === 1
+                  ? (t.foodCostFile || 'file')
+                  : (t.foodCostFiles || 'files')}
+              </span>
+              <span className="fc-export-pill">
+                <strong>{exportMonthItemCount}</strong>{' '}
+                {exportMonthItemCount === 1
+                  ? (t.foodCostItem || 'item')
+                  : (t.foodCostItems || 'items')}
+              </span>
+              <span className="fc-export-pill fc-export-pill-total">
+                {(t.total || 'Total')}: {formatCurrency(exportMonthTotal)}
+              </span>
+            </div>
+          </div>
+
+          {months[exportMonth]?.foodCost > 0 && (
+            <p className="fc-export-hint">
+              {t.foodCostExportOverwriteHint || 'This month already has a food cost on record'}
+              {' · '}{formatCurrency(months[exportMonth].foodCost)}
+              {' → '}{formatCurrency(Math.round(exportMonthTotal * 100) / 100)}
+            </p>
+          )}
+
+          {exportMonthTotal <= 0 && (
+            <p className="fc-export-hint fc-export-hint-warn">
+              {t.foodCostExportEmpty || 'No food cost imports cover this month.'}
+            </p>
+          )}
+
+          {exportFeedback && (
+            <div className={`fc-export-feedback fc-export-feedback-${exportFeedback.type}`}>
+              {exportFeedback.msg}
+            </div>
+          )}
+
+          <div className="fc-export-actions">
+            <button
+              className="btn btn-ghost"
+              onClick={() => { setShowExport(false); setExportFeedback(null); }}
+            >
+              {t.cancelBtn || 'Cancel'}
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleExportToMonthlySummary}
+              disabled={exportMonthTotal <= 0}
+            >
+              {t.foodCostExportConfirmBtn || 'Push to Monthly Summary'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div
         className={`fc-drop ${dragging ? 'dragging' : ''}`}

@@ -150,7 +150,12 @@ export default function App() {
               months={months}
             />
           )}
-          {activeTab === 'foodcost' && <FoodCostTab />}
+          {activeTab === 'foodcost' && (
+            <FoodCostTab
+              onUpsertMonth={upsertMonth}
+              months={months}
+            />
+          )}
           {activeTab === 'sheets' && (
             <SheetPanel
               dailySummary={dailySummary}
