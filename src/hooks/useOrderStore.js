@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useLocalStore } from './useLocalStore.js';
 
 // Daily record shape:
 // {
@@ -14,12 +15,9 @@ import { useState, useCallback } from 'react';
 //   notes: ''
 // }
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export function useOrderStore() {
-  const [days, setDays] = useState({}); // keyed by date string
+  // Persisted to localStorage so daily entries survive reloads.
+  const [days, setDays] = useLocalStore('days', { version: 1, initial: {} });
 
   const upsertDay = useCallback((date, updates) => {
     setDays(prev => ({
@@ -38,7 +36,7 @@ export function useOrderStore() {
         ...updates,
       }
     }));
-  }, []);
+  }, [setDays]);
 
   const removeDay = useCallback((date) => {
     setDays(prev => {
@@ -46,7 +44,7 @@ export function useOrderStore() {
       delete next[date];
       return next;
     });
-  }, []);
+  }, [setDays]);
 
   // Sorted array descending for display
   const dailySummary = Object.values(days)

@@ -1,7 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useLocalStore } from './useLocalStore.js';
 
 export function useMonthlyStore() {
-  const [months, setMonths] = useState({});
+  // Persisted to localStorage so monthly entries survive reloads.
+  const [months, setMonths] = useLocalStore('months', { version: 1, initial: {} });
 
   const upsertMonth = useCallback((month, updates) => {
     setMonths(prev => ({
@@ -20,7 +22,7 @@ export function useMonthlyStore() {
         ...updates,
       },
     }));
-  }, []);
+  }, [setMonths]);
 
   const removeMonth = useCallback((month) => {
     setMonths(prev => {
@@ -28,7 +30,7 @@ export function useMonthlyStore() {
       delete next[month];
       return next;
     });
-  }, []);
+  }, [setMonths]);
 
   return { months, upsertMonth, removeMonth };
 }
