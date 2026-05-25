@@ -78,9 +78,10 @@ export default function App() {
     if (path) navigate(path);
   };
 
-  const [itemCosts, setItemCosts] = useLocalStore('item-costs', { version: 1, initial: {} });
+  const [itemCosts, setItemCosts] = useLocalStore('item-costs', { version: 2, initial: {} });
 
   const allItems = dailySummary.map(d => ({
+    key: d.date,
     name: `Day ${d.date}`,
     cost: d.revenue,
     quantity: 1,
