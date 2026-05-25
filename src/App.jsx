@@ -4,6 +4,7 @@ import { useOrderStore } from '@hooks/useOrderStore';
 import { useMonthlyStore } from '@hooks/useMonthlyStore';
 import { useFoodCostStore } from '@hooks/useFoodCostStore';
 import { useOperatingCostsStore } from '@hooks/useOperatingCostsStore';
+import { useLocalStore } from '@hooks/useLocalStore';
 import { useTheme } from '@hooks/useTheme';
 import { useLang } from './i18n/LangContext.jsx';
 import Navbar from '@components/Navbar/Navbar.jsx';
@@ -77,9 +78,10 @@ export default function App() {
     if (path) navigate(path);
   };
 
-  const [itemCosts, setItemCosts] = useState({});
+  const [itemCosts, setItemCosts] = useLocalStore('item-costs', { version: 2, initial: {} });
 
   const allItems = dailySummary.map(d => ({
+    key: d.date,
     name: `Day ${d.date}`,
     cost: d.revenue,
     quantity: 1,

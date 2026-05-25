@@ -56,9 +56,9 @@ export default function CostAnalysis({ items, itemCosts = {}, onItemCostsChange 
 
   const revenue = items.reduce((s, item) => s + item.cost * item.quantity, 0);
 
-  const totalIngredient = items.reduce((s, item, i) => s + (parseFloat((itemCosts[i] || {}).ingredient) || 0) * item.quantity, 0);
-  const totalLabor      = items.reduce((s, item, i) => s + (parseFloat((itemCosts[i] || {}).labor)      || 0) * item.quantity, 0);
-  const totalOverhead   = items.reduce((s, item, i) => s + (parseFloat((itemCosts[i] || {}).overhead)   || 0) * item.quantity, 0);
+  const totalIngredient = items.reduce((s, item) => s + (parseFloat((itemCosts[item.key] || {}).ingredient) || 0) * item.quantity, 0);
+  const totalLabor      = items.reduce((s, item) => s + (parseFloat((itemCosts[item.key] || {}).labor)      || 0) * item.quantity, 0);
+  const totalOverhead   = items.reduce((s, item) => s + (parseFloat((itemCosts[item.key] || {}).overhead)   || 0) * item.quantity, 0);
 
   const totalCost   = totalIngredient + totalLabor + totalOverhead;
   const totalProfit = revenue - totalCost;
@@ -70,8 +70,8 @@ export default function CostAnalysis({ items, itemCosts = {}, onItemCostsChange 
 
   const hasCostData = totalCost > 0;
 
-  const updateItemCost = (index, field, value) => {
-    const updated = { ...itemCosts, [index]: { ...(itemCosts[index] || {}), [field]: value } };
+  const updateItemCost = (key, field, value) => {
+    const updated = { ...itemCosts, [key]: { ...(itemCosts[key] || {}), [field]: value } };
     if (onItemCostsChange) onItemCostsChange(updated);
   };
 
@@ -127,19 +127,19 @@ export default function CostAnalysis({ items, itemCosts = {}, onItemCostsChange 
         </div>
 
         <div className="item-cost-list">
-          {items.map((item, i) => {
-            const c         = itemCosts[i] || {};
+          {items.map((item) => {
+            const c         = itemCosts[item.key] || {};
             const ing       = parseFloat(c.ingredient) || 0;
             const lab       = parseFloat(c.labor)      || 0;
             const ovh       = parseFloat(c.overhead)   || 0;
             const unitCost   = ing + lab + ovh;
             const unitProfit = item.cost - unitCost;
             const unitMargin = item.cost > 0 ? (unitProfit / item.cost) * 100 : 0;
-            const isOpen     = activeItem === i;
+            const isOpen     = activeItem === item.key;
 
             return (
-              <div key={i} className={`item-cost-card ${isOpen ? 'open' : ''}`}>
-                <div className="item-cost-card-header" onClick={() => setActiveItem(isOpen ? null : i)}>
+              <div key={item.key} className={`item-cost-card ${isOpen ? 'open' : ''}`}>
+                <div className="item-cost-card-header" onClick={() => setActiveItem(isOpen ? null : item.key)}>
                   <div className="item-cost-card-info">
                     <span className="item-cost-name">{item.name}</span>
                     <span className="item-cost-qty">{item.quantity}× @ {formatCurrency(item.cost)}</span>
@@ -169,7 +169,7 @@ export default function CostAnalysis({ items, itemCosts = {}, onItemCostsChange 
                             <span className="target-prefix">$</span>
                             <input className="form-input form-input-sm" type="number" min="0" step="0.01"
                               placeholder="0.00" value={c[field] || ''}
-                              onChange={(e) => updateItemCost(i, field, e.target.value)} />
+                              onChange={(e) => updateItemCost(item.key, field, e.target.value)} />
                           </div>
                         </div>
                       ))}
