@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useLocalStore } from './useLocalStore.js';
 
 // Daily record shape:
@@ -53,7 +53,7 @@ export function useOrderStore() {
   // set, overrides the delivery+pickup sum — same semantics as the monthly
   // record, so users can record a day's bottom-line total even when the
   // channel breakdown is incomplete.
-  const dailySummary = Object.values(days)
+  const dailySummary = useMemo(() => Object.values(days)
     .map(d => {
       const breakdownTotal = (d.deliveryRevenue || 0) + (d.pickupRevenue || 0);
       const revenue = (d.totalRevenue || 0) > 0 ? d.totalRevenue : breakdownTotal;
@@ -66,7 +66,8 @@ export function useOrderStore() {
         thirdPartyRevenue: (d.doordash || 0) + (d.ubereats || 0) + (d.grubhub || 0),
       };
     })
-    .sort((a, b) => b.date.localeCompare(a.date));
+    .sort((a, b) => b.date.localeCompare(a.date)),
+  [days]);
 
   return { days, upsertDay, removeDay, clearAll, dailySummary };
 }

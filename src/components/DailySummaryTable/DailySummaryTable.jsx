@@ -154,7 +154,7 @@ function DayForm({ initial, onSave, onCancel }) {
               <div key={name} className="category-item">
                 <span className="category-name">{name}</span>
                 <span className="category-cost">{formatCurrency(cost)}</span>
-                <button type="button" className="btn-remove-category" onClick={() => removeCategory(name)}>×</button>
+                <button type="button" className="btn-remove-category" aria-label={t.removeCategoryBtn} onClick={() => removeCategory(name)}>×</button>
               </div>
             ))}
           </div>
@@ -355,7 +355,7 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
             <div className="day-actions">
               <button className="btn btn-ghost btn-sm"
                 onClick={e => { e.stopPropagation(); setEditingDate(day.date); }}>{t.editBtn}</button>
-              <button className="btn-remove" title="Delete day"
+              <button className="btn-remove" title={t.deleteDay} aria-label={t.deleteDay}
                 onClick={e => { e.stopPropagation(); onRemoveDay(day.date); }}>×</button>
             </div>
           </div>

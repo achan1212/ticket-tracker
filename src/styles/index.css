@@ -450,6 +450,15 @@ body {
   .app-main { padding: 2rem 2.5rem; }
 }
 
+/* Prevent iOS Safari focus-zoom on form fields. Targets any touch device
+   (including iPad in landscape) regardless of viewport width. Desktop is
+   unaffected. */
+@media (pointer: coarse) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
 /* Storage warning banner */
 .storage-warning-banner {
   display: flex;

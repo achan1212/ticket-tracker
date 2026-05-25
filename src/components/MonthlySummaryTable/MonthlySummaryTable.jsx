@@ -160,7 +160,7 @@ function MonthForm({ initial, onSave, onCancel }) {
               <div key={name} className="category-item">
                 <span className="category-name">{name}</span>
                 <span className="category-cost">{formatCurrency(cost)}</span>
-                <button type="button" className="btn-remove-category" onClick={() => removeCategory(name)}>×</button>
+                <button type="button" className="btn-remove-category" aria-label={t.removeCategoryBtn} onClick={() => removeCategory(name)}>×</button>
               </div>
             ))}
           </div>
@@ -417,7 +417,7 @@ export default function MonthlySummaryTable({ dailySummary, months, onUpsertMont
                 </button>
               )}
               {month.manual && (
-                <button className="btn-remove" title="Delete manual entry"
+                <button className="btn-remove" title={t.deleteMonthlyEntry} aria-label={t.deleteMonthlyEntry}
                   onClick={e => { e.stopPropagation(); onRemoveMonth(month.key); }}>
                   ×
                 </button>

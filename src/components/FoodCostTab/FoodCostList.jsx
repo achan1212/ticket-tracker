@@ -86,7 +86,7 @@ export default function FoodCostList({ fileGroups, onRemoveGroup, onUpdateItems,
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
               </button>
-              <button className="btn-remove" onClick={cancelEdit} title={t.cancelBtn || 'Cancel'}>×</button>
+              <button className="btn-remove" onClick={cancelEdit} title={t.cancelBtn || 'Cancel'} aria-label={t.cancelBtn || 'Cancel'}>×</button>
             </td>
           </>
         ) : (
@@ -102,7 +102,7 @@ export default function FoodCostList({ fileGroups, onRemoveGroup, onUpdateItems,
                   <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
                 </svg>
               </button>
-              <button className="btn-remove" onClick={() => removeItem(groupId, item._uid)} title={t.removeBtn || 'Remove'}>×</button>
+              <button className="btn-remove" onClick={() => removeItem(groupId, item._uid)} title={t.removeBtn || 'Remove'} aria-label={t.removeBtn || 'Remove'}>×</button>
             </td>
           </>
         )}

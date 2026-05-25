@@ -91,6 +91,7 @@ export default function OperatingCostsTab({
         <button
           className="btn btn-ghost btn-sm oc-nav-btn"
           title={t.plPrevMonth || 'Previous month'}
+          aria-label={t.plPrevMonth || 'Previous month'}
           onClick={() => setSelectedMonth(m => shiftMonth(m, -1))}
         >←</button>
 
@@ -105,6 +106,7 @@ export default function OperatingCostsTab({
         <button
           className="btn btn-ghost btn-sm oc-nav-btn"
           title={t.plNextMonth || 'Next month'}
+          aria-label={t.plNextMonth || 'Next month'}
           disabled={!canGoNext}
           onClick={() => canGoNext && setSelectedMonth(m => shiftMonth(m, 1))}
         >→</button>
@@ -189,6 +191,7 @@ export default function OperatingCostsTab({
                   type="button"
                   className="btn-remove"
                   title={t.opCostsRemoveTitle || 'Remove'}
+                  aria-label={t.opCostsRemoveTitle || 'Remove'}
                   onClick={() => removeFixedCost(selectedMonth, item.id)}
                 >×</button>
               </li>

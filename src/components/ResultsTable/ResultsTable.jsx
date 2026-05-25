@@ -537,12 +537,12 @@ export default function ResultsTable({
           {isEditing ? (
             <>
               <button className="btn-save" title={t.saveBtn || 'Save'} onClick={saveEdit}>{saveIcon}</button>
-              <button className="btn-remove" title={t.cancelBtn || 'Cancel'} onClick={cancelEdit}>×</button>
+              <button className="btn-remove" title={t.cancelBtn || 'Cancel'} aria-label={t.cancelBtn || 'Cancel'} onClick={cancelEdit}>×</button>
             </>
           ) : (
             <>
               <button className="btn-edit" title={t.editBtn || 'Edit'} onClick={() => startEdit(uid)}>{editIcon}</button>
-              <button className="btn-remove" title={t.removeBtn || 'Remove'} onClick={() => removeItem(uid)}>×</button>
+              <button className="btn-remove" title={t.removeBtn || 'Remove'} aria-label={t.removeBtn || 'Remove'} onClick={() => removeItem(uid)}>×</button>
             </>
           )}
         </td>
