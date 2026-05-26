@@ -28,6 +28,7 @@ export const NAV_GROUPS = [
       { key: 'delivery',  labelKey: 'tabDelivery',  icon: '🛵' },
       { key: 'analysis',  labelKey: 'tabAnalysis',  icon: '💰' },
       { key: 'menu',      labelKey: 'tabMenu',      icon: '🍽️' },
+      { key: 'recipes',   labelKey: 'tabRecipes',   icon: '📖' },
     ],
   },
   {
