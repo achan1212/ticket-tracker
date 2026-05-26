@@ -446,6 +446,16 @@ export const translations = {
     howTo4: 'To import back: click Import and select your',
     howTo4b: ' file — all daily records are restored',
 
+    // Chart creation tips
+    chartTipsTitle: 'Creating charts from the Dashboard sheet',
+    chartTip1: 'Open the',
+    chartTip1b: 'Dashboard',
+    chartTip2: 'sheet — the first tab in the workbook. It contains three tables: Key Metrics, Monthly Trend, and Platform Comparison.',
+    chartTip3: 'Click any cell inside a table, then select the whole table including the header row (Ctrl+A / Cmd+A also works).',
+    chartTip4: 'Go to',
+    chartTip4b: 'Insert → Chart',
+    chartTip4c: 'and pick a chart type — Excel will auto-populate it from your selection.',
+
     // Clear all data (danger zone)
     clearAllLabel: 'Danger Zone',
     clearAllSub: 'Permanently delete every daily record, monthly record, food cost import, and P&L target. Export first if you want a backup — this cannot be undone.',
@@ -929,6 +939,16 @@ export const translations = {
     howTo4: '如需导入：点击导入并选择您的',
     howTo4b: '文件 — 所有每日记录将被恢复',
 
+    // 图表创建提示
+    chartTipsTitle: '从仪表板创建图表',
+    chartTip1: '打开工作簿中的第一个标签页',
+    chartTip1b: 'Dashboard',
+    chartTip2: '（仪表板）。它包含三个表格：关键指标、月度趋势和平台对比。',
+    chartTip3: '点击表格中任意单元格，然后选择整个表格（包括表头行，或使用 Ctrl+A / Cmd+A）。',
+    chartTip4: '前往',
+    chartTip4b: '插入 → 图表',
+    chartTip4c: '并选择图表类型 — Excel 将自动从所选数据生成图表。',
+
     // 清除所有数据
     clearAllLabel: '危险操作',
     clearAllSub: '永久删除所有每日记录、月度记录、食材成本导入和损益目标。建议先导出以备份 — 此操作无法撤销。',
@@ -1411,6 +1431,16 @@ export const translations = {
     howTo3: 'Ambas hojas incluyen una marca de tiempo de exportación',
     howTo4: 'Para importar de vuelta: haz clic en Importar y selecciona tu archivo',
     howTo4b: ' — todos los registros diarios se restauran',
+
+    // Consejos para crear gráficos
+    chartTipsTitle: 'Crear gráficos desde la hoja Dashboard',
+    chartTip1: 'Abre la hoja',
+    chartTip1b: 'Dashboard',
+    chartTip2: '— es la primera pestaña del libro. Contiene tres tablas: Métricas Clave, Tendencia Mensual y Comparación de Plataformas.',
+    chartTip3: 'Haz clic en cualquier celda dentro de una tabla, luego selecciona toda la tabla incluyendo la fila de encabezado (Ctrl+A / Cmd+A también funciona).',
+    chartTip4: 'Ve a',
+    chartTip4b: 'Insertar → Gráfico',
+    chartTip4c: 'y elige un tipo de gráfico — Excel lo llenará automáticamente con tu selección.',
 
     // Zona de peligro — limpiar todos los datos
     clearAllLabel: 'Zona de Peligro',

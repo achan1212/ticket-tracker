@@ -147,6 +147,16 @@ export default function SheetPanel({
         </ol>
       </div>
 
+      <div className="sheet-howto">
+        <p className="sheet-howto-title">{t.chartTipsTitle}</p>
+        <ol>
+          <li>{t.chartTip1} <strong>{t.chartTip1b}</strong></li>
+          <li>{t.chartTip2}</li>
+          <li>{t.chartTip3}</li>
+          <li>{t.chartTip4} <strong>{t.chartTip4b}</strong> {t.chartTip4c}</li>
+        </ol>
+      </div>
+
       {/* DANGER ZONE — clear all data */}
       <div className="sheet-danger">
         <div className="sheet-danger-text">
