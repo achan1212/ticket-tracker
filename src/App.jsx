@@ -1,10 +1,11 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useOrderStore } from '@hooks/useOrderStore';
 import { useMonthlyStore } from '@hooks/useMonthlyStore';
 import { useFoodCostStore } from '@hooks/useFoodCostStore';
 import { useOperatingCostsStore } from '@hooks/useOperatingCostsStore';
 import { useLocalStore } from '@hooks/useLocalStore';
+import { useRecipeStore } from '@hooks/useRecipeStore';
 import { useTheme } from '@hooks/useTheme';
 import { useLang } from './i18n/LangContext.jsx';
 import Navbar from '@components/Navbar/Navbar.jsx';
@@ -24,6 +25,7 @@ const FoodCostTab         = lazy(() => import('@components/FoodCostTab/FoodCostT
 const MenuAnalytics       = lazy(() => import('@components/MenuAnalytics/MenuAnalytics.jsx'));
 const ProfitLossTab       = lazy(() => import('@components/ProfitLossTab/ProfitLossTab.jsx'));
 const OperatingCostsTab   = lazy(() => import('@components/OperatingCostsTab/OperatingCostsTab.jsx'));
+const RecipeTab           = lazy(() => import('@components/RecipeTab/RecipeTab.jsx'));
 
 const TAB_KEYS = getAllTabKeys();
 
@@ -32,12 +34,30 @@ export default function App() {
   const { months, upsertMonth, removeMonth, clearAll: clearAllMonths } = useMonthlyStore();
   const { groups: foodCostGroups, foodCostByDay, foodCostByMonth, upsertGroup: upsertFoodCostGroup, clearAll: clearAllFoodCost } = useFoodCostStore();
   const opCosts = useOperatingCostsStore();
+  const recipes = useRecipeStore();
+
+  // Ingredient names + per-unit costs derived from food cost imports.
+  // Used by RecipeTab to suggest unit costs when the user types an ingredient name.
+  const ingredientSuggestions = useMemo(() => {
+    const map = new Map();
+    for (const g of foodCostGroups) {
+      if (g.status !== 'done') continue;
+      for (const item of g.items) {
+        const qty = Math.max(item.quantity, 1);
+        const unitCost = item.cost / qty;
+        const key = item.name.trim().toLowerCase();
+        if (!map.has(key)) map.set(key, { name: item.name.trim(), unitCost });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [foodCostGroups]);
 
   const handleClearAllData = () => {
     clearAllDays();
     clearAllMonths();
     clearAllFoodCost();
     opCosts.clearAll();
+    recipes.clearAll();
     try { localStorage.removeItem('ticket-tracker:pl-targets'); } catch { /* quota / private browsing */ }
     // Reload so every component re-reads from a clean localStorage. The stores
     // above already cleared their in-memory state, but child components like
@@ -206,6 +226,18 @@ export default function App() {
               months={months}
               dailySummary={dailySummary}
               foodCostByDay={foodCostByDay}
+            />
+          )}
+          {activeTab === 'recipes' && (
+            <RecipeTab
+              recipes={recipes.recipes}
+              addRecipe={recipes.addRecipe}
+              updateRecipe={recipes.updateRecipe}
+              removeRecipe={recipes.removeRecipe}
+              addIngredient={recipes.addIngredient}
+              updateIngredient={recipes.updateIngredient}
+              removeIngredient={recipes.removeIngredient}
+              ingredientSuggestions={ingredientSuggestions}
             />
           )}
           {activeTab === 'scanner' && (

@@ -1,0 +1,260 @@
+.rc-tab {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.rc-sub {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin: -0.25rem 0 1.25rem;
+  line-height: 1.5;
+}
+
+/* ── New recipe form ── */
+.rc-new-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.rc-new-form .form-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Empty state ── */
+.rc-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 0.75rem;
+}
+
+/* ── Recipe list ── */
+.rc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ── Recipe card ── */
+.rc-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.rc-card.open {
+  border-color: var(--accent);
+}
+
+.rc-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.rc-card-header:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.rc-card-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.rc-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.rc-card-count {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.rc-plate-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 0.4rem;
+  padding: 0.15rem 0.45rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.rc-chevron {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* ── Card body ── */
+.rc-card-body {
+  border-top: 1px solid var(--border);
+  padding: 1.1rem 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── Settings row ── */
+.rc-settings {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.rc-setting-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.rc-setting-text {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Ingredient table ── */
+.rc-table-wrap {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+}
+
+.rc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  min-width: 580px;
+}
+
+.rc-table th {
+  background: var(--surface2);
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+
+.rc-table td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.rc-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.rc-table .form-input-sm {
+  min-width: 70px;
+  padding: 0.3rem 0.45rem;
+}
+
+.rc-table td:first-child .form-input-sm {
+  min-width: 130px;
+}
+
+.rc-table-empty {
+  text-align: center;
+  padding: 1.25rem !important;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.rc-line-cost {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--text);
+  text-align: right;
+  white-space: nowrap;
+  padding-right: 0.75rem !important;
+}
+
+/* ── Add ingredient button ── */
+.rc-add-ing-btn {
+  align-self: flex-start;
+}
+
+/* ── Summary panel ── */
+.rc-summary {
+  background: var(--surface2);
+  border-radius: 0.6rem;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.rc-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.3rem 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.rc-summary-row:last-child {
+  border-bottom: none;
+}
+
+.rc-summary-row strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.rc-summary-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.rc-summary-pct strong {
+  font-size: 1rem;
+}
+
+.rc-summary-pct.good strong { color: #4ade80; }
+.rc-summary-pct.warn strong { color: #f59e0b; }
+.rc-summary-pct.bad  strong { color: #ef4444; }
+
+/* ── Responsive ── */
+@media (max-width: 520px) {
+  .rc-settings {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .rc-card-count {
+    display: none;
+  }
+}
