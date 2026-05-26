@@ -119,7 +119,7 @@ export default function OperatingCostsTab({
           <div className="target-input-wrap oc-labor-input-wrap">
             <span className="target-prefix">$</span>
             <input
-              className="form-input form-input-sm"
+              className="form-input"
               type="number" min="0" step="0.01"
               placeholder="0.00"
               value={laborInput}
