@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { formatCurrency } from '@utils/helpers';
 import PlatformBreakdown from '@components/PlatformBreakdown/PlatformBreakdown';
 import { useLang } from '../../i18n/LangContext.jsx';
 import './MonthlySummaryTable.css';
@@ -21,7 +20,7 @@ function formatDate(iso) {
 }
 
 function MonthForm({ initial, onSave, onCancel }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const [form, setForm] = useState({
     deliveryRevenue: initial?.deliveryRevenue || '',
     pickupRevenue:   initial?.pickupRevenue   || '',
@@ -214,7 +213,7 @@ function MonthForm({ initial, onSave, onCancel }) {
 }
 
 export default function MonthlySummaryTable({ dailySummary, months, onUpsertMonth, onRemoveMonth, foodCostByMonth = {} }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const [expandedMonth, setExpandedMonth] = useState(null);
   const [editingMonth, setEditingMonth]   = useState(null);
   const [showAddForm, setShowAddForm]     = useState(false);

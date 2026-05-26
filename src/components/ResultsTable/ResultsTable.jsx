@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { exportToCSV, calcTotal, formatCurrency } from '@utils/helpers';
+import { exportToCSV, calcTotal } from '@utils/helpers';
 import { useLang } from '../../i18n/LangContext.jsx';
 import { useLocalStore } from '@hooks/useLocalStore';
 import CostAnalysis from '@components/CostAnalysis/CostAnalysis';
@@ -23,7 +23,7 @@ export default function ResultsTable({
   onUpsertDay, onUpsertMonth,
   days = {}, months = {},
 }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const [activeTab, setActiveTab] = useState('summary');
   const [showRaw, setShowRaw] = useState(false);
   const [showForm, setShowForm] = useState(false);

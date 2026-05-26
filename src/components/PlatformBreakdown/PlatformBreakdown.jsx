@@ -1,4 +1,3 @@
-import { formatCurrency } from '@utils/helpers';
 import { useLang } from '../../i18n/LangContext.jsx';
 
 const PLATFORM_LABELS = {
@@ -13,7 +12,7 @@ const PLATFORM_LABELS = {
  * statement that exposes more than just sales (tips, tax, fees, net payout).
  */
 export default function PlatformBreakdown({ record }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   if (!record) return null;
 
   const entries = Object.keys(PLATFORM_LABELS)

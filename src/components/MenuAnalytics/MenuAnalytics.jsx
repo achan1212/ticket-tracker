@@ -4,7 +4,6 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
 } from 'recharts';
 import { useLang } from '../../i18n/LangContext.jsx';
-import { formatCurrency } from '@utils/helpers';
 import { useMenuCosts } from '@hooks/useMenuCosts';
 import {
   aggregateMenuItems,
@@ -59,7 +58,7 @@ function MatrixTooltip({ active, payload, t }) {
 }
 
 export default function MenuAnalytics({ days = {}, months = {}, dailySummary = [], foodCostByDay = {} }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const [view, setView] = useState('table');
   const [sortKey, setSortKey] = useState('totalRevenue');
   const [query, setQuery] = useState('');

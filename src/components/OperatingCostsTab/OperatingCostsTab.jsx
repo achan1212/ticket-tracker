@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { formatCurrency } from '@utils/helpers';
 import { useLang } from '../../i18n/LangContext.jsx';
 import Dropdown from '@components/ui/Dropdown.jsx';
 import './OperatingCostsTab.css';
@@ -34,7 +33,7 @@ export default function OperatingCostsTab({
   updateFixedCost,
   removeFixedCost,
 }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const [selectedMonth, setSelectedMonth] = useState(currentMonthISO);
   const [laborInput, setLaborInput]       = useState('');
   const [draftCategory, setDraftCategory] = useState('');

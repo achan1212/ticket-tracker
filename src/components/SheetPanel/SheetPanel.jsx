@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { exportToXlsx, importFromXlsx } from '@utils/sheetIO';
 import { useLang } from '../../i18n/LangContext.jsx';
+import DangerConfirmButton from '@components/ui/DangerConfirmButton.jsx';
 import './SheetPanel.css';
 
 // Read pl-targets straight from localStorage so the export always picks up
@@ -48,13 +49,7 @@ export default function SheetPanel({
   };
 
   const handleClearAll = () => {
-    if (!onClearAll) return;
-    const msg = t.clearAllConfirm ||
-      'This will permanently delete ALL data: daily records, monthly records, food cost imports, and P&L targets. Export first if you want a backup. Continue?';
-    if (!window.confirm(msg)) return;
-    // Double-confirm because this is irreversible
-    if (!window.confirm(t.clearAllConfirm2 || 'Are you absolutely sure? This cannot be undone.')) return;
-    onClearAll();
+    if (onClearAll) onClearAll();
   };
 
   const handleImportFile = async (file) => {
@@ -155,13 +150,14 @@ export default function SheetPanel({
             {t.clearAllSub || 'Wipes every daily, monthly, food cost, and P&L target you have stored. Make sure to export first if you want a backup.'}
           </p>
         </div>
-        <button
+        <DangerConfirmButton
           className="btn btn-danger"
-          onClick={handleClearAll}
+          onConfirm={handleClearAll}
+          confirmLabel={t.clearAllConfirmInline}
           disabled={isEmpty}
         >
           {t.clearAllBtn || 'Clear all data'}
-        </button>
+        </DangerConfirmButton>
       </div>
     </div>
   );

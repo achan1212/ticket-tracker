@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { formatCurrency } from '@utils/helpers';
 import PlatformBreakdown from '@components/PlatformBreakdown/PlatformBreakdown';
 import { useLang } from '../../i18n/LangContext.jsx';
 import { generateDemoDays, generateDemoFoodCostGroups } from '@utils/demoData';
@@ -16,7 +15,7 @@ function todayISO() {
 }
 
 function DayForm({ initial, onSave, onCancel }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const [form, setForm] = useState({
     deliveryRevenue: initial?.deliveryRevenue || '',
     pickupRevenue:   initial?.pickupRevenue   || '',
@@ -206,7 +205,7 @@ function DayForm({ initial, onSave, onCancel }) {
 }
 
 export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onRemoveDay, onUpsertFoodCostGroup, foodCostByDay = {} }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const [editingDate, setEditingDate] = useState(null);
   const [addingDate, setAddingDate]   = useState('');
   const [showAddForm, setShowAddForm] = useState(false);

@@ -1,6 +1,5 @@
 import { Fragment, useState } from 'react';
 import { useLang } from '../../i18n/LangContext.jsx';
-import { formatCurrency } from '@utils/helpers';
 
 const emptyEdit = { name: '', cost: '', quantity: '' };
 
@@ -9,7 +8,7 @@ const emptyEdit = { name: '', cost: '', quantity: '' };
 const mergeKey = (item) => `${item.name}|${item.cost}`;
 
 export default function FoodCostList({ fileGroups, onRemoveGroup, onUpdateItems, onSetGroupDate }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const [editingKey, setEditingKey] = useState(null); // `${groupId}:${uid}`
   const [editForm, setEditForm] = useState(emptyEdit);
   // Set of group IDs that the user has manually collapsed. Default state is

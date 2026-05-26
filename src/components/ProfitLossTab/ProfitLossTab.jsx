@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { formatCurrency } from '@utils/helpers';
 import { useLang } from '../../i18n/LangContext.jsx';
 import { useLocalStore } from '@hooks/useLocalStore.js';
 import Dropdown from '@components/ui/Dropdown.jsx';
@@ -62,7 +61,7 @@ function computePL(month, dailySummary, months, foodCostByMonth, targets, laborB
 }
 
 export default function ProfitLossTab({ dailySummary, months, foodCostByMonth = {}, laborByMonth = {}, fixedByMonth = {} }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const [selectedMonth, setSelectedMonth] = useState(currentMonthISO);
   const [targets, setTargets] = useLocalStore('pl-targets', {
     version: 1,

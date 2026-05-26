@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { formatCurrency } from '@utils/helpers';
 import { parsePlatformReport } from '@utils/platformReportIO';
 import { useLang } from '../../i18n/LangContext.jsx';
 import './DeliveryAnalysis.css';
@@ -11,7 +10,7 @@ const PLATFORMS = {
 };
 
 function PlatformSalesRow({ platformKey, platform, days, months = {}, foodCostRate = 0 }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const [rates, setRates]       = useState({ ...platform });
   const [showRates, setShowRates] = useState(false);
 
@@ -135,7 +134,7 @@ function PlatformSalesRow({ platformKey, platform, days, months = {}, foodCostRa
 }
 
 function DayPlatformEntry({ date, day, onUpsertDay }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     doordash:       day.doordash       || '',
@@ -222,7 +221,7 @@ function DayPlatformEntry({ date, day, onUpsertDay }) {
 }
 
 export default function DeliveryAnalysis({ days, months = {}, dailySummary, onUpsertDay, onUpsertMonth, foodCostByDay = {} }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const [activeSection, setActiveSection] = useState('entry');
   const [uploadingPlatform, setUploadingPlatform] = useState(null);
   const [uploadStatus, setUploadStatus] = useState(null); // { type: 'success'|'error', msg }

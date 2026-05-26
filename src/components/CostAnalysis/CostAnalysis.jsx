@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useLang } from '../../i18n/LangContext.jsx';
-import { formatCurrency } from '@utils/helpers';
 import './CostAnalysis.css';
 
 const FAST_CASUAL_BENCHMARKS = {
@@ -49,7 +48,7 @@ function MetricBar({ label, actual, target, lowerIsBetter = true, suffix = '%', 
 }
 
 export default function CostAnalysis({ items, itemCosts = {}, onItemCostsChange }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const [targets, setTargets]     = useState({ ...FAST_CASUAL_BENCHMARKS });
   const [showTargets, setShowTargets] = useState(false);
   const [activeItem, setActiveItem]   = useState(null);

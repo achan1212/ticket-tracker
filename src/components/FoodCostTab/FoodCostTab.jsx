@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLang } from '../../i18n/LangContext.jsx';
 import { parseFoodCostFile, flattenForExport } from '@utils/foodCostIO';
-import { formatCurrency } from '@utils/helpers';
 import { useFoodCostStore } from '@hooks/useFoodCostStore';
+import DangerConfirmButton from '@components/ui/DangerConfirmButton.jsx';
 import FoodCostList from './FoodCostList.jsx';
 import './FoodCostTab.css';
 
@@ -27,7 +27,7 @@ function currentMonthISO() {
 }
 
 export default function FoodCostTab({ onUpsertMonth, months = {} }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -113,11 +113,8 @@ export default function FoodCostTab({ onUpsertMonth, months = {} }) {
   };
 
   const handleClearAll = () => {
-    // Safety against accidentally nuking persisted data — confirm because the
-    // food cost store now lives across reloads.
     if (fileGroups.length === 0) return;
-    const confirmed = window.confirm(t.foodCostClearConfirm || 'Clear all food cost imports? This cannot be undone.');
-    if (confirmed) clearAll();
+    clearAll();
   };
 
   const doneGroups = fileGroups.filter(g => g.status === 'done');
@@ -214,9 +211,14 @@ export default function FoodCostTab({ onUpsertMonth, months = {} }) {
             <button className="btn btn-secondary" onClick={handleExport} disabled={totalItems === 0}>
               {t.exportCSV || 'Export CSV'}
             </button>
-            <button className="btn btn-ghost" onClick={handleClearAll}>
+            <DangerConfirmButton
+              className="btn btn-ghost"
+              onConfirm={handleClearAll}
+              confirmLabel={t.foodCostClearConfirmInline}
+              disabled={fileGroups.length === 0}
+            >
               {t.foodCostClearBtn || 'Clear all'}
-            </button>
+            </DangerConfirmButton>
           </div>
         )}
       </div>

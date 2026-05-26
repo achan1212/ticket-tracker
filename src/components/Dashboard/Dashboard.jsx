@@ -3,7 +3,6 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell
 } from 'recharts';
-import { formatCurrency } from '@utils/helpers';
 import { useLang } from '../../i18n/LangContext.jsx';
 import { useTheme } from '../../hooks/useTheme.js';
 import { useLocalStore } from '@hooks/useLocalStore.js';
@@ -142,7 +141,7 @@ function CustomTooltip({ active, payload, label }) {
 }
 
 export default function Dashboard({ dailySummary, days, months, foodCostByDay = {}, foodCostByMonth = {}, laborByMonth = {}, fixedByMonth = {} }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const { theme } = useTheme();
   const isDark = theme !== 'light';
 

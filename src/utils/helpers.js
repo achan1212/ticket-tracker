@@ -1,5 +1,8 @@
-export function formatCurrency(amount) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+// `locale` defaults to en-US for back-compat with any non-React caller; the
+// preferred path is to consume the locale-bound `formatCurrency` exposed by
+// `useLang()`, which maps the active app language to a BCP-47 locale.
+export function formatCurrency(amount, locale = 'en-US', currency = 'USD') {
+  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount);
 }
 
 export function calcTotal(items) {
