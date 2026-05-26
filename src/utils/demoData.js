@@ -161,3 +161,46 @@ export function generateDemoFoodCostGroups() {
 
   return groups;
 }
+
+// Demo monthly labor totals (~28–32% of demo revenue per month). Keyed by
+// 'YYYY-MM' to match the operating-costs store. Idempotent: setLaborForMonth
+// overwrites by month key.
+export function generateDemoLabor(demoDays) {
+  const revByMonth = {};
+  for (const d of demoDays) {
+    const month = d.date.slice(0, 7);
+    revByMonth[month] = (revByMonth[month] || 0) + (d.deliveryRevenue || 0) + (d.pickupRevenue || 0);
+  }
+  const result = {};
+  for (const [month, revenue] of Object.entries(revByMonth)) {
+    const pct = 0.28 + Math.random() * 0.04; // 28–32%
+    result[month] = Math.round(revenue * pct);
+  }
+  return result;
+}
+
+// Demo monthly fixed costs (Rent / Utilities / Insurance / Internet / POS
+// software / Licenses) — realistic small-restaurant baseline totalling ~$5,100.
+// Item IDs are deterministic (`demo-fixed-YYYY-MM-<slug>`) so re-loading demo
+// data via setFixedForMonth replaces cleanly instead of duplicating rows.
+export function generateDemoFixedCosts(demoDays) {
+  const months = Array.from(new Set(demoDays.map(d => d.date.slice(0, 7))));
+  const template = [
+    { slug: 'rent',      category: 'Rent',      amount: 3500, notes: '' },
+    { slug: 'utilities', category: 'Utilities', amount: 750,  notes: '' },
+    { slug: 'insurance', category: 'Insurance', amount: 450,  notes: '' },
+    { slug: 'internet',  category: 'Internet',  amount: 120,  notes: '' },
+    { slug: 'software',  category: 'Software',  amount: 200,  notes: 'POS subscription' },
+    { slug: 'licenses',  category: 'Licenses',  amount: 80,   notes: 'Health permit (amortized)' },
+  ];
+  const result = {};
+  for (const month of months) {
+    result[month] = template.map(t => ({
+      id: `demo-fixed-${month}-${t.slug}`,
+      category: t.category,
+      amount: t.amount,
+      notes: t.notes,
+    }));
+  }
+  return result;
+}

@@ -62,6 +62,19 @@ export function useOperatingCostsStore() {
     });
   }, [setData]);
 
+  // Replace the entire array of fixed-cost items for a month. Items are
+  // expected to carry their own `id`; used by the demo loader for stable,
+  // idempotent re-imports.
+  const setFixedForMonth = useCallback((month, items) => {
+    setData(prev => ({
+      ...(prev || INITIAL),
+      fixed: {
+        ...((prev || INITIAL).fixed || {}),
+        [month]: Array.isArray(items) ? items : [],
+      },
+    }));
+  }, [setData]);
+
   const removeFixedCost = useCallback((month, id) => {
     setData(prev => {
       const base = prev || INITIAL;
@@ -97,6 +110,7 @@ export function useOperatingCostsStore() {
     addFixedCost,
     updateFixedCost,
     removeFixedCost,
+    setFixedForMonth,
     clearAll,
   };
 }

@@ -144,6 +144,8 @@ export default function App() {
               onUpsertDay={upsertDay}
               onRemoveDay={removeDay}
               onUpsertFoodCostGroup={upsertFoodCostGroup}
+              onSetLaborForMonth={opCosts.setLaborForMonth}
+              onSetFixedForMonth={opCosts.setFixedForMonth}
               foodCostByDay={foodCostByDay}
             />
           )}

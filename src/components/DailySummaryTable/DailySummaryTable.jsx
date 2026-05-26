@@ -2,7 +2,7 @@ import { useState } from 'react';
 import PlatformBreakdown from '@components/PlatformBreakdown/PlatformBreakdown';
 import RevenueForm from '@components/RevenueForm/RevenueForm.jsx';
 import { useLang } from '../../i18n/LangContext.jsx';
-import { generateDemoDays, generateDemoFoodCostGroups } from '@utils/demoData';
+import { generateDemoDays, generateDemoFoodCostGroups, generateDemoLabor, generateDemoFixedCosts } from '@utils/demoData';
 import './DailySummaryTable.css';
 
 function formatDate(iso) {
@@ -15,7 +15,7 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onRemoveDay, onUpsertFoodCostGroup, foodCostByDay = {} }) {
+export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onRemoveDay, onUpsertFoodCostGroup, onSetLaborForMonth, onSetFixedForMonth, foodCostByDay = {} }) {
   const { t, formatCurrency } = useLang();
   const [editingDate, setEditingDate] = useState(null);
   const [addingDate, setAddingDate]   = useState('');
@@ -30,6 +30,14 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
     if (onUpsertFoodCostGroup) {
       const demoFoodCost = generateDemoFoodCostGroups();
       demoFoodCost.forEach(group => onUpsertFoodCostGroup(group));
+    }
+    if (onSetLaborForMonth) {
+      const demoLabor = generateDemoLabor(demoData);
+      Object.entries(demoLabor).forEach(([month, amount]) => onSetLaborForMonth(month, amount));
+    }
+    if (onSetFixedForMonth) {
+      const demoFixed = generateDemoFixedCosts(demoData);
+      Object.entries(demoFixed).forEach(([month, items]) => onSetFixedForMonth(month, items));
     }
     alert(t.loadDemoSuccess || 'Demo data loaded!');
   };
