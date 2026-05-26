@@ -201,6 +201,162 @@ function buildPLTargetsSheet(plTargets, exportedAt) {
 }
 
 /**
+ * Build a "Dashboard" summary sheet — laid out as three discrete tables
+ * (Key Metrics, Monthly Trend, Platform Comparison) so the user can select
+ * any table in Excel and Insert → Chart to visualize it instantly.
+ */
+function buildDashboardSheet({ sortedDaily, sortedMonthly, foodCostByDay, foodCostByMonth }, exportedAt) {
+  // Avoid double-counting: when a month has daily records, use those and
+  // skip the manual monthly entry for that same month.
+  const dailyMonthKeys = new Set(sortedDaily.map(d => d.date.slice(0, 7)));
+  const monthlyEffective = sortedMonthly.filter(m => !dailyMonthKeys.has(m.month));
+
+  // ── Aggregate key metrics ─────────────────────────────────────
+  const totalRevenue =
+    sortedDaily.reduce((s, d) => s + effectiveRevenue(d), 0) +
+    monthlyEffective.reduce((s, m) => s + effectiveRevenue(m), 0);
+
+  const totalOrders =
+    sortedDaily.reduce((s, d) => s + (d.deliveryOrders || 0) + (d.pickupOrders || 0), 0) +
+    monthlyEffective.reduce((s, m) => s + (m.deliveryOrders || 0) + (m.pickupOrders || 0), 0);
+
+  const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+  let totalFoodCost = 0;
+  for (const d of sortedDaily) totalFoodCost += foodCostByDay[d.date] ?? d.foodCost ?? 0;
+  for (const m of monthlyEffective) totalFoodCost += foodCostByMonth[m.month] ?? m.foodCost ?? 0;
+  const foodCostPct = totalRevenue > 0 ? totalFoodCost / totalRevenue : 0;
+
+  const allPeriods = [
+    ...sortedDaily.map(d => d.date),
+    ...monthlyEffective.map(m => m.month + '-01'),
+  ].sort();
+  const dateRange = allPeriods.length > 0
+    ? `${allPeriods[0]} → ${allPeriods[allPeriods.length - 1]}`
+    : '—';
+
+  // ── Monthly trend (daily records aggregated up + monthly fallback) ──
+  const monthlyMap = new Map();
+  for (const d of sortedDaily) {
+    const month = d.date.slice(0, 7);
+    const entry = monthlyMap.get(month) || { month, revenue: 0, orders: 0, foodCost: 0 };
+    entry.revenue  += effectiveRevenue(d);
+    entry.orders   += (d.deliveryOrders || 0) + (d.pickupOrders || 0);
+    entry.foodCost += foodCostByDay[d.date] ?? d.foodCost ?? 0;
+    monthlyMap.set(month, entry);
+  }
+  for (const m of monthlyEffective) {
+    monthlyMap.set(m.month, {
+      month: m.month,
+      revenue: effectiveRevenue(m),
+      orders: (m.deliveryOrders || 0) + (m.pickupOrders || 0),
+      foodCost: foodCostByMonth[m.month] ?? m.foodCost ?? 0,
+    });
+  }
+  const monthlyTrend = Array.from(monthlyMap.values()).sort((a, b) => a.month.localeCompare(b.month));
+
+  // ── Platform comparison ───────────────────────────────────────
+  const allRecords = [...sortedDaily, ...monthlyEffective];
+  const sumKey = (k) => allRecords.reduce((s, r) => s + (r[k] || 0), 0);
+  const platforms = [
+    { name: 'DoorDash',  revenue: sumKey('doordash'), orders: sumKey('doordashOrders') },
+    { name: 'Uber Eats', revenue: sumKey('ubereats'), orders: sumKey('ubereatsOrders') },
+    { name: 'Grubhub',   revenue: sumKey('grubhub'),  orders: sumKey('grubhubOrders')  },
+    { name: 'Pickup',    revenue: sumKey('pickupRevenue'), orders: sumKey('pickupOrders') },
+  ];
+  const platformTotal = platforms.reduce((s, p) => s + p.revenue, 0);
+
+  // ── Build the sheet, tracking row indices for number formatting ──
+  const rows = [];
+  rows.push([`Dashboard — Exported: ${exportedAt}`]);
+  rows.push([]);
+  rows.push(['TIP: Select any table below (including its header row), then Insert → Chart in Excel to visualize it.']);
+  rows.push([]);
+
+  rows.push(['KEY METRICS']);
+  rows.push(['Metric', 'Value']);
+  const metricsStart = rows.length;
+  rows.push(['Total Revenue',       totalRevenue]);
+  rows.push(['Total Orders',        totalOrders]);
+  rows.push(['Average Order Value', avgOrderValue]);
+  rows.push(['Total Food Cost',     totalFoodCost]);
+  rows.push(['Food Cost %',         foodCostPct]);
+  rows.push(['Date Range',          dateRange]);
+  rows.push([]);
+
+  rows.push(['MONTHLY TREND']);
+  rows.push(['Month', 'Revenue', 'Orders', 'Avg/Order', 'Food Cost', 'Food Cost %']);
+  const monthlyStart = rows.length;
+  for (const m of monthlyTrend) {
+    rows.push([
+      m.month,
+      m.revenue,
+      m.orders,
+      m.orders  > 0 ? m.revenue  / m.orders  : 0,
+      m.foodCost,
+      m.revenue > 0 ? m.foodCost / m.revenue : 0,
+    ]);
+  }
+  rows.push([]);
+
+  rows.push(['PLATFORM COMPARISON']);
+  rows.push(['Platform', 'Revenue', 'Orders', '% of Total Revenue']);
+  const platformStart = rows.length;
+  for (const p of platforms) {
+    rows.push([
+      p.name,
+      p.revenue,
+      p.orders,
+      platformTotal > 0 ? p.revenue / platformTotal : 0,
+    ]);
+  }
+
+  const ws = utils.aoa_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 22 }, { wch: 18 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+  ];
+
+  // ── Number formatting via cell .z (works with xlsx community edition) ──
+  const CURRENCY = '"$"#,##0.00';
+  const PCT      = '0.0%';
+
+  const setFmt = (r, c, fmt) => {
+    const addr = utils.encode_cell({ r, c });
+    if (ws[addr] && typeof ws[addr].v === 'number') ws[addr].z = fmt;
+  };
+
+  // Key metrics value column (col B = 1)
+  setFmt(metricsStart + 0, 1, CURRENCY); // Total Revenue
+  setFmt(metricsStart + 2, 1, CURRENCY); // Avg Order Value
+  setFmt(metricsStart + 3, 1, CURRENCY); // Total Food Cost
+  setFmt(metricsStart + 4, 1, PCT);      // Food Cost %
+
+  // Monthly trend rows
+  for (let i = 0; i < monthlyTrend.length; i++) {
+    const r = monthlyStart + i;
+    // Force month col to text so Excel doesn't auto-convert YYYY-MM into a date
+    const monthAddr = utils.encode_cell({ r, c: 0 });
+    if (ws[monthAddr]) {
+      ws[monthAddr].t = 's';
+      ws[monthAddr].v = String(ws[monthAddr].v);
+    }
+    setFmt(r, 1, CURRENCY); // Revenue
+    setFmt(r, 3, CURRENCY); // Avg/Order
+    setFmt(r, 4, CURRENCY); // Food Cost
+    setFmt(r, 5, PCT);      // Food Cost %
+  }
+
+  // Platform comparison rows
+  for (let i = 0; i < platforms.length; i++) {
+    const r = platformStart + i;
+    setFmt(r, 1, CURRENCY); // Revenue
+    setFmt(r, 3, PCT);      // % of Total Revenue
+  }
+
+  return ws;
+}
+
+/**
  * Export every persisted store to a multi-sheet .xlsx file.
  *
  * @param {Object} opts
@@ -235,6 +391,15 @@ export function exportToXlsx(opts = {}) {
 
   const wb = utils.book_new();
   const exportedAt = new Date().toLocaleString('en-US');
+
+  // Dashboard goes first so it's the active sheet when the file opens.
+  if (sortedDaily.length > 0 || sortedMonthly.length > 0) {
+    utils.book_append_sheet(
+      wb,
+      buildDashboardSheet({ sortedDaily, sortedMonthly, foodCostByDay, foodCostByMonth }, exportedAt),
+      'Dashboard'
+    );
+  }
 
   if (sortedDaily.length > 0) {
     utils.book_append_sheet(

@@ -136,9 +136,19 @@ export default function SheetPanel({
         <p className="sheet-howto-title">{t.howToTitle}</p>
         <ol>
           <li>{t.howTo1} <strong>{t.howTo1b}</strong></li>
-          <li>{t.howTo2} <strong>sheets.google.com</strong> {t.howTo2b}</li>
+          <li>{t.howTo2}</li>
           <li>{t.howTo3}</li>
           <li>{t.howTo4} <strong>.xlsx</strong>{t.howTo4b}</li>
+        </ol>
+      </div>
+
+      <div className="sheet-howto">
+        <p className="sheet-howto-title">{t.chartTipsTitle}</p>
+        <ol>
+          <li>{t.chartTip1} <strong>{t.chartTip1b}</strong></li>
+          <li>{t.chartTip2}</li>
+          <li>{t.chartTip3}</li>
+          <li>{t.chartTip4} <strong>{t.chartTip4b}</strong> {t.chartTip4c}</li>
         </ol>
       </div>
 
