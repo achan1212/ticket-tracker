@@ -49,6 +49,7 @@ export default function PlatformBreakdown({ record }) {
 }
 
 function Row({ label, value, isCount, negative, bold }) {
+  const { formatCurrency } = useLang();
   if (value == null || (value === 0 && !bold)) return null;
   return (
     <div className="pbc-row">

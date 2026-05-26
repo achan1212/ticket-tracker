@@ -126,6 +126,7 @@ const PRESETS = [
 ];
 
 function CustomTooltip({ active, payload, label }) {
+  const { formatCurrency } = useLang();
   if (!active || !payload?.length) return null;
   return (
     <div className="chart-tooltip">

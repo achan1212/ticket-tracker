@@ -41,7 +41,8 @@ function formatPeriodKey(key) {
   return key;
 }
 
-function MatrixTooltip({ active, payload, t }) {
+function MatrixTooltip({ active, payload }) {
+  const { t, formatCurrency } = useLang();
   if (!active || !payload?.length) return null;
   const p = payload[0].payload;
   const q = QUADRANTS[p.quadrant];
@@ -289,7 +290,7 @@ export default function MenuAnalytics({ days = {}, months = {}, dailySummary = [
                 />
                 <ReferenceLine x={thresholds.rev}    stroke="var(--text-muted)" strokeDasharray="4 4" />
                 <ReferenceLine y={thresholds.margin} stroke="var(--text-muted)" strokeDasharray="4 4" />
-                <Tooltip content={<MatrixTooltip t={t} />} cursor={{ strokeDasharray: '3 3' }} />
+                <Tooltip content={<MatrixTooltip />} cursor={{ strokeDasharray: '3 3' }} />
                 <Scatter
                   data={matrixItems}
                   shape={(props) => {
