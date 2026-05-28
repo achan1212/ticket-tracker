@@ -2,11 +2,13 @@ import { useState, useMemo } from 'react';
 import { useLang } from '../../i18n/LangContext.jsx';
 import { useTheme } from '../../hooks/useTheme.js';
 import { useLocalStore } from '@hooks/useLocalStore.js';
+import { useDashboardColors } from './useDashboardColors.js';
 import KPICards from './KPICards.jsx';
 import RevenueChart from './RevenueChart.jsx';
 import FoodCostChart from './FoodCostChart.jsx';
 import OrderCharts from './OrderCharts.jsx';
 import PlatformCharts from './PlatformCharts.jsx';
+import ColorEditor from './ColorEditor.jsx';
 import {
   PRESETS,
   todayISO,
@@ -30,16 +32,11 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
     initial: { laborPct: 30, overheadPct: 16, otherPct: 5 },
   });
 
-  // Theme-aware chart colors. Light mode needs higher-contrast alternatives
-  // because the dark-mode neon yellow (#e8ff47) is illegible on white.
-  const C = {
-    accent:   isDark ? '#e8ff47' : '#5a8a17',
-    delivery: isDark ? '#06C167' : '#059669',
-    pickup:   isDark ? '#3b82f6' : '#2563eb',
-    foodCost: isDark ? '#f97316' : '#c2410c',
-    grid:     isDark ? '#2a2a2a' : '#e5e7eb',
-    tick:     isDark ? '#666'    : '#555',
-  };
+  // Color customization hook - replaces hardcoded colors with customizable ones
+  const { C, platformColors, updateColor, resetColors, getEditableColors, hasCustomColors } = useDashboardColors(isDark);
+
+  // Edit mode state for color customization
+  const [isEditingColors, setIsEditingColors] = useState(false);
 
   const [fromDate, setFromDate] = useState(daysAgoISO(30));
   const [toDate, setToDate]     = useState(todayISO());
@@ -226,7 +223,26 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
 
   return (
     <div className="dashboard">
-      <h2 className="page-title">{t.tabDashboard}</h2>
+      <div className="dash-header">
+        <h2 className="page-title">{t.tabDashboard}</h2>
+        <button
+          className={`dash-edit-colors-btn ${isEditingColors ? 'active' : ''}`}
+          onClick={() => setIsEditingColors(!isEditingColors)}
+          title="Customize dashboard colors"
+        >
+          <span className="edit-icon">🎨</span>
+          {isEditingColors ? 'Done' : 'Edit Colors'}
+        </button>
+      </div>
+
+      {isEditingColors && (
+        <ColorEditor
+          editableColors={getEditableColors()}
+          onColorChange={updateColor}
+          onReset={resetColors}
+          hasCustomColors={hasCustomColors}
+        />
+      )}
 
       {/* ── DATE RANGE SELECTOR ── */}
       <div className="dash-range-card">
@@ -324,7 +340,7 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
             C={C}
           />
 
-          <PlatformCharts platformData={platformData} />
+          <PlatformCharts platformData={platformData} platformColors={platformColors} />
         </>
       )}
     </div>

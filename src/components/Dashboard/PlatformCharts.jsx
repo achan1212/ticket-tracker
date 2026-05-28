@@ -4,10 +4,12 @@ import { PLATFORM_COLORS, PLATFORM_LABELS } from './dashboardUtils.js';
 
 // Platform pie chart + accompanying breakdown list with per-channel
 // progress bars. Caller passes the already-aggregated platformData array.
-export default function PlatformCharts({ platformData }) {
+export default function PlatformCharts({ platformData, platformColors }) {
   const { t, formatCurrency } = useLang();
   if (platformData.length === 0) return null;
 
+  // Use custom colors if provided, otherwise fall back to defaults
+  const colors = platformColors || PLATFORM_COLORS;
   const topRevenue = platformData[0].revenue;
 
   return (
@@ -22,7 +24,7 @@ export default function PlatformCharts({ platformData }) {
               label={({ name, percent }) => `${PLATFORM_LABELS[name] || name} ${(percent * 100).toFixed(0)}%`}
               labelLine={false}>
               {platformData.map((entry, i) => (
-                <Cell key={i} fill={PLATFORM_COLORS[entry.name] || '#888'} opacity={0.9} />
+                <Cell key={i} fill={colors[entry.name] || '#888'} opacity={0.9} />
               ))}
             </Pie>
             <Tooltip formatter={(val) => formatCurrency(val)} />
@@ -37,7 +39,7 @@ export default function PlatformCharts({ platformData }) {
           {platformData.map(p => (
             <div key={p.name} className="pb-row">
               <div className="pb-info">
-                <span className="pb-dot" style={{ background: PLATFORM_COLORS[p.name] || '#888' }} />
+                <span className="pb-dot" style={{ background: colors[p.name] || '#888' }} />
                 <span className="pb-name">{PLATFORM_LABELS[p.name] || p.name}</span>
                 <span className="pb-count">{p.count} {t.dashOrdersUnit}</span>
               </div>
@@ -46,7 +48,7 @@ export default function PlatformCharts({ platformData }) {
                 <div className="pb-bar-track">
                   <div className="pb-bar-fill" style={{
                     width: `${topRevenue > 0 ? (p.revenue / topRevenue) * 100 : 0}%`,
-                    background: PLATFORM_COLORS[p.name] || '#888'
+                    background: colors[p.name] || '#888'
                   }} />
                 </div>
               </div>
