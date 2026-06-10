@@ -3,6 +3,8 @@ import { exportToCSV, calcTotal } from '@utils/helpers';
 import { useLang } from '../../i18n/LangContext.jsx';
 import { useLocalStore } from '@hooks/useLocalStore';
 import CostAnalysis from '@components/CostAnalysis/CostAnalysis';
+import ItemRow from './ItemRow.jsx';
+import ExportSummaryPanel from './ExportSummaryPanel.jsx';
 import './ResultsTable.css';
 
 const emptyForm = { name: '', cost: '', quantity: '1' };
@@ -419,136 +421,10 @@ export default function ResultsTable({
     (parseFloat(editForm.cost) || 0) * (parseInt(editForm.quantity, 10) || 0)
   );
 
-  const editIcon = (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 20h9"/>
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
-    </svg>
-  );
-  const saveIcon = (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12"/>
-    </svg>
-  );
-  const dragIcon = (
-    <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor" aria-hidden="true">
-      <circle cx="2.5" cy="3" r="1.25"/><circle cx="7.5" cy="3" r="1.25"/>
-      <circle cx="2.5" cy="7" r="1.25"/><circle cx="7.5" cy="7" r="1.25"/>
-      <circle cx="2.5" cy="11" r="1.25"/><circle cx="7.5" cy="11" r="1.25"/>
-    </svg>
-  );
-
   const tabs = [
     { key: 'summary',  label: t.tabSummary,  icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg> },
     { key: 'analysis', label: t.tabAnalysis, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
   ];
-
-  const renderRow = (entry, displayIndex) => {
-    const { uid, item, type } = entry;
-    const isEditing = editingUid === uid;
-    // `isIncluded` reflects the checkbox state: true = row is part of the
-    // total and goes into the export's categories breakdown; false = the row
-    // is excluded (dimmed + struck through visually).
-    const isIncluded = !!item.isCategory;
-    const isManual = type === 'manual';
-    const sourceBadgeLabel = isManual ? t.badgeManual : t.badgeScanned;
-    const sourceBadgeClass = isManual ? 'item-source-badge manual' : 'item-source-badge';
-    const rowClass = [
-      isManual ? 'manual-row' : '',
-      isEditing ? 'editing-row' : '',
-      isIncluded ? '' : 'excluded-row',
-      draggingUid === uid ? 'dragging-row' : '',
-      dragOverUid === uid ? 'drag-over' : '',
-    ].filter(Boolean).join(' ');
-
-    return (
-      <tr
-        key={uid}
-        className={rowClass}
-        style={{ animationDelay: `${displayIndex * 0.04}s` }}
-        draggable={!isEditing}
-        onDragStart={(e) => handleDragStart(e, uid)}
-        onDragOver={(e) => handleDragOver(e, uid)}
-        onDragLeave={(e) => handleDragLeave(e, uid)}
-        onDrop={(e) => handleDrop(e, uid)}
-        onDragEnd={handleDragEnd}
-      >
-        <td className="item-name">
-          <div className="name-cell">
-            <span className="drag-handle" title={t.dragHandleTitle || 'Drag to reorder'} aria-hidden="true">{dragIcon}</span>
-            <label className="cat-toggle" title={t.catToggleTitle || 'Include this row in the total'}>
-              <input
-                type="checkbox"
-                checked={isIncluded}
-                onChange={() => toggleCategory(uid)}
-                aria-label={t.catToggleTitle || 'Include this row in the total'}
-              />
-            </label>
-            {isEditing ? (
-              <input
-                className="form-input form-input-inline"
-                name="name"
-                value={editForm.name}
-                onChange={handleEditChange}
-                onKeyDown={handleEditKeyDown}
-                autoFocus
-              />
-            ) : (
-              <>
-                <span className="name-text">{item.name}</span>
-                <span className={sourceBadgeClass}>{sourceBadgeLabel}</span>
-              </>
-            )}
-          </div>
-        </td>
-        <td className="item-cost">
-          {isEditing ? (
-            <input
-              className="form-input form-input-inline form-input-num"
-              name="cost"
-              type="number"
-              min="0"
-              step="0.01"
-              value={editForm.cost}
-              onChange={handleEditChange}
-              onKeyDown={handleEditKeyDown}
-            />
-          ) : formatCurrency(item.cost)}
-        </td>
-        <td className="item-qty">
-          {isEditing ? (
-            <input
-              className="form-input form-input-inline form-input-num"
-              name="quantity"
-              type="number"
-              min="1"
-              value={editForm.quantity}
-              onChange={handleEditChange}
-              onKeyDown={handleEditKeyDown}
-            />
-          ) : (
-            <span className="qty-badge">{item.quantity}×</span>
-          )}
-        </td>
-        <td className="item-subtotal">
-          {isEditing ? editLiveSubtotal : formatCurrency(item.cost * item.quantity)}
-        </td>
-        <td className="item-actions">
-          {isEditing ? (
-            <>
-              <button className="btn-save" title={t.saveBtn || 'Save'} onClick={saveEdit}>{saveIcon}</button>
-              <button className="btn-remove" title={t.cancelBtn || 'Cancel'} aria-label={t.cancelBtn || 'Cancel'} onClick={cancelEdit}>×</button>
-            </>
-          ) : (
-            <>
-              <button className="btn-edit" title={t.editBtn || 'Edit'} onClick={() => startEdit(uid)}>{editIcon}</button>
-              <button className="btn-remove" title={t.removeBtn || 'Remove'} aria-label={t.removeBtn || 'Remove'} onClick={() => removeItem(uid)}>×</button>
-            </>
-          )}
-        </td>
-      </tr>
-    );
-  };
 
   return (
     <div className="results-wrap">
@@ -609,144 +485,22 @@ export default function ResultsTable({
           )}
 
           {showExport && (
-            <div className="export-summary-panel">
-              <div className="export-summary-row">
-                <div className="export-summary-field">
-                  <label className="target-label">{t.exportTargetLabel || 'Send to'}</label>
-                  <div className="export-target-pills">
-                    <button
-                      type="button"
-                      className={`filter-pill ${exportTarget === 'daily' ? 'active' : ''}`}
-                      onClick={() => setExportTarget('daily')}
-                    >{t.tabSummary || 'Daily'}</button>
-                    <button
-                      type="button"
-                      className={`filter-pill ${exportTarget === 'monthly' ? 'active' : ''}`}
-                      onClick={() => setExportTarget('monthly')}
-                    >{t.tabMonthly || 'Monthly'}</button>
-                  </div>
-                </div>
-
-                <div className="export-summary-field">
-                  <label className="target-label">
-                    {exportTarget === 'daily' ? (t.colDate || 'Date') : (t.labelMonth || 'Month')}
-                  </label>
-                  <input
-                    type={exportTarget === 'daily' ? 'date' : 'month'}
-                    className="form-input"
-                    value={exportTarget === 'daily' ? exportDate : exportDate.slice(0, 7)}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setExportDate(exportTarget === 'daily' ? v : `${v}-01`);
-                    }}
-                    onClick={(e) => e.currentTarget.showPicker?.()}
-                  />
-                </div>
-
-                <div className="export-summary-field">
-                  <label className="target-label">
-                    {t.exportChannelLabel || 'Channel'}
-                    <span className="export-optional-tag">{t.exportOptional || 'optional'}</span>
-                  </label>
-                  <div className="export-target-pills">
-                    <button
-                      type="button"
-                      className={`filter-pill ${exportChannel === 'none' ? 'active' : ''}`}
-                      onClick={() => setExportChannel('none')}
-                    >{t.exportChannelNone || 'Unspecified'}</button>
-                    <button
-                      type="button"
-                      className={`filter-pill ${exportChannel === 'pickup' ? 'active' : ''}`}
-                      onClick={() => setExportChannel('pickup')}
-                    >{t.labelPickup || 'Pickup'}</button>
-                    <button
-                      type="button"
-                      className={`filter-pill ${exportChannel === 'delivery' ? 'active' : ''}`}
-                      onClick={() => setExportChannel('delivery')}
-                    >{t.labelDelivery || 'Delivery'}</button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="export-bulk-row">
-                <span className="export-bulk-label">
-                  {t.exportBulkLabel || 'Categories'}:
-                </span>
-                <button
-                  type="button"
-                  className={`filter-pill ${allCategoryState === 'all' ? 'active' : ''}`}
-                  onClick={() => setAllCategories(true)}
-                  disabled={allItems.length === 0}
-                >
-                  {t.exportSelectAllBtn || 'Select all'}
-                </button>
-                <button
-                  type="button"
-                  className={`filter-pill ${allCategoryState === 'none' ? 'active' : ''}`}
-                  onClick={() => setAllCategories(false)}
-                  disabled={allItems.length === 0}
-                >
-                  {t.exportClearAllBtn || 'Clear all'}
-                </button>
-                <span className="export-bulk-state">
-                  {allItems.filter(i => i.isCategory).length} / {allItems.length} {t.exportSelectedSuffix || 'selected'}
-                </span>
-              </div>
-
-              <div className="export-summary-preview">
-                <span className="export-preview-pill"><strong>{exportPreview.orderCount}</strong> {t.labelOrders || 'orders'}</span>
-                <span className="export-preview-pill"><strong>{formatCurrency(exportPreview.revenue)}</strong> {t.labelRevenue || 'revenue'}</span>
-                <span className="export-preview-pill">
-                  <strong>{Object.keys(exportPreview.categories).length}</strong>{' '}
-                  {t.categoriesBadge || 'categories'}
-                </span>
-                {detectedDate && exportDate === detectedDate && (
-                  <span className="export-preview-pill export-preview-auto">
-                    {t.foodCostDateAuto || 'auto'}
-                  </span>
-                )}
-                {exportChannel === 'none' && (
-                  <span className="export-preview-pill export-preview-muted" title={t.exportChannelNoneTitle || 'Channel revenue stays at 0 for delivery and pickup; only the categories are pushed.'}>
-                    {t.exportChannelNoneLabel || 'Channel skipped'}
-                  </span>
-                )}
-              </div>
-
-              {Object.keys(exportPreview.categories).length === 0 && (
-                <p className="export-summary-hint">
-                  {t.exportNoIncludedHint || 'No rows are checked. Use the checkboxes (or Select all) to choose which rows go into the summary — checked rows contribute to revenue and become category entries.'}
-                </p>
-              )}
-
-              {Object.keys(exportPreview.categories).length > 0 && (
-                <div className="export-summary-cats">
-                  <span className="export-summary-cats-label">{t.revenueCategories || 'Revenue Categories'}</span>
-                  <div className="category-list">
-                    {Object.entries(exportPreview.categories).map(([name, cost]) => (
-                      <div key={name} className="category-item">
-                        <span className="category-name">{name}</span>
-                        <span className="category-cost">{formatCurrency(cost)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {exportFeedback && (
-                <div className={`export-feedback export-feedback-${exportFeedback.type}`}>
-                  {exportFeedback.msg}
-                </div>
-              )}
-
-              <div className="export-summary-actions">
-                <button className="btn btn-ghost" onClick={() => { setShowExport(false); setExportFeedback(null); }}>
-                  {t.cancelBtn || 'Cancel'}
-                </button>
-                <button className="btn btn-primary" onClick={handleExportToSummary}>
-                  {t.exportConfirmBtn || 'Push to Summary'}
-                </button>
-              </div>
-            </div>
+            <ExportSummaryPanel
+              exportTarget={exportTarget}
+              setExportTarget={setExportTarget}
+              exportDate={exportDate}
+              setExportDate={setExportDate}
+              exportChannel={exportChannel}
+              setExportChannel={setExportChannel}
+              exportPreview={exportPreview}
+              allItems={allItems}
+              allCategoryState={allCategoryState}
+              setAllCategories={setAllCategories}
+              detectedDate={detectedDate}
+              exportFeedback={exportFeedback}
+              onExport={handleExportToSummary}
+              onClose={() => { setShowExport(false); setExportFeedback(null); }}
+            />
           )}
           <div className={`results-body ${preview ? '' : 'no-preview'}`}>
             {preview && (
@@ -802,7 +556,30 @@ export default function ResultsTable({
                   </tr>
                 </thead>
                 <tbody>
-                  {orderedItems.map((entry, i) => renderRow(entry, i))}
+                  {orderedItems.map((entry, i) => (
+                    <ItemRow
+                      key={entry.uid}
+                      entry={entry}
+                      displayIndex={i}
+                      isEditing={editingUid === entry.uid}
+                      editForm={editForm}
+                      editLiveSubtotal={editLiveSubtotal}
+                      draggingUid={draggingUid}
+                      dragOverUid={dragOverUid}
+                      onEditChange={handleEditChange}
+                      onEditKeyDown={handleEditKeyDown}
+                      onSaveEdit={saveEdit}
+                      onCancelEdit={cancelEdit}
+                      onStartEdit={startEdit}
+                      onRemoveItem={removeItem}
+                      onToggleCategory={toggleCategory}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onDragEnd={handleDragEnd}
+                    />
+                  ))}
                   {editError && editingUid && (
                     <tr className="edit-error-row"><td colSpan="5">{editError}</td></tr>
                   )}
