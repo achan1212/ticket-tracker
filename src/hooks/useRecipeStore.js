@@ -64,7 +64,21 @@ export function useRecipeStore() {
     }));
   }, [setRecipes]);
 
+  // Merge a batch of recipes by id: existing ids are replaced in place, new
+  // ids are appended, and recipes not in the batch (user-created ones) are
+  // untouched. Used by the demo loader for idempotent re-loads.
+  const upsertRecipes = useCallback((batch) => {
+    if (!Array.isArray(batch) || batch.length === 0) return;
+    setRecipes(prev => {
+      const incoming = new Map(batch.map(r => [r.id, r]));
+      const merged = prev.map(r => incoming.has(r.id) ? incoming.get(r.id) : r);
+      const existingIds = new Set(prev.map(r => r.id));
+      const appended = batch.filter(r => !existingIds.has(r.id));
+      return [...merged, ...appended];
+    });
+  }, [setRecipes]);
+
   const clearAll = useCallback(() => setRecipes([]), [setRecipes]);
 
-  return { recipes, addRecipe, updateRecipe, removeRecipe, addIngredient, updateIngredient, removeIngredient, clearAll };
+  return { recipes, addRecipe, updateRecipe, removeRecipe, addIngredient, updateIngredient, removeIngredient, upsertRecipes, clearAll };
 }

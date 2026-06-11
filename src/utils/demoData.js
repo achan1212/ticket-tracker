@@ -204,3 +204,82 @@ export function generateDemoFixedCosts(demoDays) {
   }
   return result;
 }
+
+// Demo recipes for the Recipe Costing tab. Ingredient names intentionally
+// match the demo food-cost catalog (generateDemoFoodCostGroups) so the
+// import-driven autofill suggestions line up with what's on screen. Unit
+// costs are per-oz breakdowns of those bulk catalog prices; plate costs land
+// at a plausible 16–28% of sell price. All values and IDs are deterministic
+// (`demo-recipe-<slug>`) so re-loads replace cleanly via upsertRecipes.
+export function generateDemoRecipes() {
+  const RECIPES = [
+    {
+      slug: 'margherita-pizza',
+      name: 'Margherita Pizza',
+      sellPrice: '13.50',
+      ingredients: [
+        ['Pizza Dough Mix (25 lb)',   'oz', '0.075', '9',    '5'],
+        ['Tomato Sauce (1 gal)',      'oz', '0.086', '4',    '3'],
+        ['Mozzarella Cheese (5 lb)',  'oz', '0.31',  '5',    '4'],
+        ['Olive Oil (1 gal)',         'oz', '0.29',  '0.5',  '0'],
+      ],
+    },
+    {
+      slug: 'pepperoni-pizza',
+      name: 'Pepperoni Pizza',
+      sellPrice: '15.00',
+      ingredients: [
+        ['Pizza Dough Mix (25 lb)',   'oz', '0.075', '9',    '5'],
+        ['Tomato Sauce (1 gal)',      'oz', '0.086', '4',    '3'],
+        ['Mozzarella Cheese (5 lb)',  'oz', '0.31',  '5',    '4'],
+        ['Pepperoni (5 lb)',          'oz', '0.44',  '3',    '2'],
+      ],
+    },
+    {
+      slug: 'spaghetti-bolognese',
+      name: 'Spaghetti Bolognese',
+      sellPrice: '14.50',
+      ingredients: [
+        ['Pasta (10 lb case)',        'oz', '0.094', '4',    '0'],
+        ['Ground Beef (5 lb)',        'oz', '0.375', '5',    '8'],
+        ['Tomato Sauce (1 gal)',      'oz', '0.086', '5',    '3'],
+        ['Parmesan (2 lb)',           'oz', '0.72',  '0.75', '0'],
+        ['Garlic (1 lb)',             'oz', '0.50',  '0.25', '5'],
+      ],
+    },
+    {
+      slug: 'chicken-alfredo',
+      name: 'Chicken Alfredo',
+      sellPrice: '16.00',
+      ingredients: [
+        ['Pasta (10 lb case)',        'oz', '0.094', '4',    '0'],
+        ['Chicken Breast (10 lb)',    'oz', '0.26',  '6',    '10'],
+        ['Heavy Cream (1 gal)',       'oz', '0.117', '4',    '0'],
+        ['Parmesan (2 lb)',           'oz', '0.72',  '1',    '0'],
+        ['Garlic (1 lb)',             'oz', '0.50',  '0.25', '5'],
+      ],
+    },
+    {
+      slug: 'caesar-salad',
+      name: 'Caesar Salad',
+      sellPrice: '9.75',
+      ingredients: [
+        ['Romaine Lettuce (case)',    'oz', '0.125', '5',    '12'],
+        ['Tomatoes (10 lb)',          'oz', '0.125', '2',    '8'],
+        ['Parmesan (2 lb)',           'oz', '0.72',  '0.5',  '0'],
+        ['Olive Oil (1 gal)',         'oz', '0.29',  '0.75', '0'],
+      ],
+    },
+  ];
+
+  return RECIPES.map(r => ({
+    id: `demo-recipe-${r.slug}`,
+    name: r.name,
+    targetFoodCostPct: 30,
+    sellPrice: r.sellPrice,
+    ingredients: r.ingredients.map(([name, unit, unitCost, portionSize, wastePct], i) => ({
+      _uid: `demo-recipe-${r.slug}-${i}`,
+      name, unit, unitCost, portionSize, wastePct,
+    })),
+  }));
+}

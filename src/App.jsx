@@ -189,6 +189,7 @@ export default function App() {
               onUpsertFoodCostGroup={upsertFoodCostGroup}
               onSetLaborForMonth={opCosts.setLaborForMonth}
               onSetFixedForMonth={opCosts.setFixedForMonth}
+              onUpsertRecipes={recipes.upsertRecipes}
               foodCostByDay={foodCostByDay}
             />
           )}
