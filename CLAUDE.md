@@ -123,14 +123,60 @@ Full audit across correctness, accessibility, i18n, and performance. Items group
   }, [selectedMonth, laborByMonth]);
   ```
 
-### Tier 2 — Quality / UX issues (fix soon)
+### Tier 2 — Quality / UX issues — ALL DONE ✅
 
-- **formatCurrency locale-awareness**: hardcoded `'en-US'` locale and `'USD'` currency in helpers.js. Should respect user locale or at least be a project constant. Low urgency since app is English-first.
-- **Icon-only button aria-labels**: several `<button>` elements (close ×, remove −, nav arrows ←/→) have no accessible name. Add `aria-label` or `<span className="sr-only">` to each.
-- **iOS auto-zoom**: form inputs with `font-size < 16px` trigger auto-zoom on iOS Safari. Set `font-size: 16px` on all `input, select, textarea` in the global CSS or add `touch-action: manipulation` where appropriate.
-- **window.confirm replacement**: destructive actions (clear-all, remove food cost group) use `window.confirm`, which is blocked in some browser policies and unstyled. Replace with an inline confirmation pattern (flip button to red "Are you sure?" state for 3s).
-- **useOrderStore.dailySummary not memoized**: `dailySummary` is recomputed on every render of any component that calls `useOrderStore()`. Wrap in `useMemo` inside the hook with `[days]` dependency.
-- **Large bundle chunks**: `xlsx` and `pdfjs-dist` are imported in multiple files without `vite.config.js` manual chunks, so they may land in the main bundle. Add `manualChunks: { xlsx: ['xlsx'], pdfjs: ['pdfjs-dist'] }` to `vite.config.js`.
-- **DayForm / MonthForm deduplication**: both forms share the same field layout for delivery / pickup / platform breakdown. Extract shared `RevenueFields` component to reduce ~120 lines of duplication.
-- **Dashboard.jsx is 706 lines**: split chart sections into sub-components (`RevenueChart`, `FoodCostChart`, `KPICards`) and keep Dashboard.jsx as a layout coordinator under ~200 lines.
-- **ResultsTable.jsx is 853 lines**: extract `PlatformRows`, `DeliveryFeeRow`, and `ExportToolbar` into separate files.
+All nine items shipped (June 2026): locale-aware `formatCurrency` via `useLang()`,
+icon-button aria-labels, iOS 16px input rule, `DangerConfirmButton` inline confirm,
+memoized `dailySummary`, xlsx/pdfjs manual chunks, shared `RevenueForm`,
+Dashboard split (718→~350 lines, chart sub-components), ResultsTable split
+(853→630, `ItemRow` + `ExportSummaryPanel`).
+
+---
+
+## Audit Findings (2026-06-10)
+
+Second audit pass, covering code added after the May audit (dashboard color
+customization, Recipe tab, Excel export) plus a UX/perf sweep. Work is batched
+into three PRs; status updated as each lands.
+
+### PR batch 1 — Color customization fixes (#1, #2, #5, #7) — ⏳ planned
+
+**#1 — Custom colors ignore theme (documented bug class)**
+- [src/components/Dashboard/useDashboardColors.js](src/components/Dashboard/useDashboardColors.js) `getColor` returns the same custom hex for dark AND light themes. A color picked in dark mode (e.g. neon yellow) is illegible in light mode — exactly the "dark hex leaked into light mode" bug class from the May audit.
+- Fix: store custom colors per-theme — `dashboard-colors` shape becomes `{ dark: {...}, light: {...} }`; custom override only applies to the theme it was set in. Migrate the flat v1 shape into `dark`.
+
+**#2 — Color editor UI entirely hardcoded English**
+- [ColorEditor.jsx](src/components/Dashboard/ColorEditor.jsx) ("Customize Dashboard Colors", "Reset to Default", "Chart Colors", "Platform Colors"), [Dashboard.jsx](src/components/Dashboard/Dashboard.jsx) ("Edit Colors"/"Done" button + title), [ColorPicker.jsx](src/components/Dashboard/ColorPicker.jsx) (`Edit {label} color` title), and all 8 labels in `getEditableColors()`.
+- Fix: ~12 new keys × 3 locales (en/zh/es); pass `t` through or call `useLang()` in each component.
+
+**#5 — ColorPicker accepts invalid hex**
+- Free-text input pushes unvalidated text into chart strokes and `<input type="color">` (accepts only `#rrggbb`).
+- Fix: validate `/^#[0-9a-f]{6}$/i` before committing; keep local draft state for partial typing.
+
+**#7 — `updateColor` stale-closure spread**
+- `setCustomColors({ ...customColors, [key]: value })` drops writes during rapid native-picker drags.
+- Fix: functional form `prev => ({ ...prev, [key]: value })`.
+
+### PR batch 2 — Recipe locale + demo-load UX (#3, #6) — ⏳ planned
+
+**#3 — RecipeTab regressed to raw `formatCurrency`**
+- [RecipeTab.jsx](src/components/RecipeTab/RecipeTab.jsx) imports from `@utils/helpers` instead of destructuring the locale-bound version from `useLang()` (the pattern every other component uses). Plate costs don't follow the active locale.
+
+**#6 — `alert()` on demo load**
+- [DailySummaryTable.jsx](src/components/DailySummaryTable/DailySummaryTable.jsx) `handleLoadDemo` calls blocking, unstyled `alert()`. Replace with an inline success banner (same pattern as sheet-feedback).
+
+### PR batch 3 — Clear-all completeness + chunk naming (#4, #8) — ⏳ planned
+
+**#4 — Clear-all leaves data behind**
+- `handleClearAll` in [App.jsx](src/App.jsx) misses: all nine `scanner-*` keys (results, manual-items, edits, removed, order, rawtext, file-name, detected-date, show-results), `item-costs`, `menu-item-costs`. Danger-zone copy promises a full wipe.
+- Decision: `dashboard-colors` is a **preference** (like theme/language) and intentionally survives clear-all. Everything else above gets wiped.
+
+**#8 — recharts chunk naming**
+- Vite auto-splits recharts (375 KB) but with an unstable hashed name. Add `recharts: ['recharts']` to `manualChunks` for a stable cacheable chunk, matching xlsx/pdfjs.
+
+### Verified clean (no action)
+- `useMonthlyStore` / `useRecipeStore`: no derived data, no memoization needed.
+- `useFoodCostStore`: memoizes correctly.
+- Excel Dashboard-sheet export code: clean.
+- RecipeTab a11y (aria-labels, keyboard-expandable cards): done well.
+- Recipe i18n keys: present in all three locales.
