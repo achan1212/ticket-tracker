@@ -31,6 +31,7 @@ All persisted state goes through `useLocalStore(namespace, { version, initial, m
 | `useMonthlyStore` | `months` | `{ 'YYYY-MM': monthRecord }` |
 | `useFoodCostStore` | `foodcost-groups` | `[{ id, name, date, status, items, importedAt }]` |
 | `useOperatingCostsStore` | `operating-costs` | `{ labor: { 'YYYY-MM': number }, fixed: { 'YYYY-MM': [{ id, category, amount, notes }] } }` |
+| `useInventoryStore` | `inventory` | `{ items: [{ id, name, unit, parLevel }], movements: [{ id, itemId, date, type: 'restock'\|'usage'\|'waste', quantity, note, source, sourceGroupId? }] }` — on-hand is derived by summing movements, never stored; `sourceGroupId` guards food-cost imports against double-entry |
 | (read in P&L + Dashboard) | `pl-targets` | `{ laborPct, overheadPct, otherPct }` |
 
 ### Data-model gotchas
@@ -67,9 +68,10 @@ Reference for future planning; don't re-implement.
 - `generateDemoLabor(demoDays)` — monthly labor at ~28–32% of that month's demo revenue (keyed `YYYY-MM`, overwritten via `setLaborForMonth`).
 - `generateDemoFixedCosts(demoDays)` — six fixed-cost lines per month (~$5,100 total), IDs `demo-fixed-YYYY-MM-<slug>`, replaced via `setFixedForMonth`.
 - `generateDemoRecipes()` — five recipes (pizzas, pastas, salad) whose ingredient names exactly match the food-cost catalog so import-driven autofill suggestions line up; plate costs land at 16–28% of sell price. IDs `demo-recipe-<slug>`, merged via `upsertRecipes` (replaces demo ids, leaves user recipes untouched).
+- `generateDemoInventory()` — eight stocked items matching catalog SKUs with three weeks of dated movements (weekly restocks + usage, one waste entry per item); three items land at/below par so the low-stock badge shows. IDs `demo-inv-*`, merged via `upsertDemo`.
 
 ### Destructive actions
-Clear-all-data lives in the **Sheets tab → bottom danger zone** (inline two-click `DangerConfirmButton`). Wipes order/monthly/food-cost/operating-costs/recipe stores plus the extra data keys (`pl-targets`, `item-costs`, `menu-item-costs`, all `scanner-*`), then `window.location.reload()` so components reading their own `useLocalStore` slices come back clean. **Preference keys survive on purpose**: `dashboard-colors` (like theme/language). Gotcha: a key owned by an always-mounted `useLocalStore` (e.g. App-level `item-costs`) must also have its in-memory state reset — the hook's `beforeunload` flush would otherwise write the old value back after `removeItem`.
+Clear-all-data lives in the **Sheets tab → bottom danger zone** (inline two-click `DangerConfirmButton`). Wipes order/monthly/food-cost/operating-costs/recipe/inventory stores plus the extra data keys (`pl-targets`, `item-costs`, `menu-item-costs`, all `scanner-*`), then `window.location.reload()` so components reading their own `useLocalStore` slices come back clean. **Preference keys survive on purpose**: `dashboard-colors` (like theme/language). Gotcha: a key owned by an always-mounted `useLocalStore` (e.g. App-level `item-costs`) must also have its in-memory state reset — the hook's `beforeunload` flush would otherwise write the old value back after `removeItem`.
 
 ### Build
 `npm run build` (Vite). Lazy-loaded route chunks per tab. Lint/type-check is part of the build.

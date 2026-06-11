@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import PlatformBreakdown from '@components/PlatformBreakdown/PlatformBreakdown';
 import RevenueForm from '@components/RevenueForm/RevenueForm.jsx';
 import { useLang } from '../../i18n/LangContext.jsx';
-import { generateDemoDays, generateDemoFoodCostGroups, generateDemoLabor, generateDemoFixedCosts, generateDemoRecipes } from '@utils/demoData';
+import { generateDemoDays, generateDemoFoodCostGroups, generateDemoLabor, generateDemoFixedCosts, generateDemoRecipes, generateDemoInventory } from '@utils/demoData';
 import './DailySummaryTable.css';
 
 function formatDate(iso) {
@@ -15,7 +15,7 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onRemoveDay, onUpsertFoodCostGroup, onSetLaborForMonth, onSetFixedForMonth, onUpsertRecipes, foodCostByDay = {} }) {
+export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onRemoveDay, onUpsertFoodCostGroup, onSetLaborForMonth, onSetFixedForMonth, onUpsertRecipes, onUpsertInventory, foodCostByDay = {} }) {
   const { t, formatCurrency } = useLang();
   const [editingDate, setEditingDate] = useState(null);
   const [addingDate, setAddingDate]   = useState('');
@@ -46,6 +46,9 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
     }
     if (onUpsertRecipes) {
       onUpsertRecipes(generateDemoRecipes());
+    }
+    if (onUpsertInventory) {
+      onUpsertInventory(generateDemoInventory());
     }
     setDemoFeedback(`✓ ${t.loadDemoSuccess || 'Demo data loaded!'}`);
     clearTimeout(demoFeedbackTimer.current);

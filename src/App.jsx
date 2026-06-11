@@ -6,6 +6,7 @@ import { useFoodCostStore } from '@hooks/useFoodCostStore';
 import { useOperatingCostsStore } from '@hooks/useOperatingCostsStore';
 import { useLocalStore } from '@hooks/useLocalStore';
 import { useRecipeStore } from '@hooks/useRecipeStore';
+import { useInventoryStore } from '@hooks/useInventoryStore';
 import { useTheme } from '@hooks/useTheme';
 import { useLang } from './i18n/LangContext.jsx';
 import Navbar from '@components/Navbar/Navbar.jsx';
@@ -26,6 +27,7 @@ const MenuAnalytics       = lazy(() => import('@components/MenuAnalytics/MenuAna
 const ProfitLossTab       = lazy(() => import('@components/ProfitLossTab/ProfitLossTab.jsx'));
 const OperatingCostsTab   = lazy(() => import('@components/OperatingCostsTab/OperatingCostsTab.jsx'));
 const RecipeTab           = lazy(() => import('@components/RecipeTab/RecipeTab.jsx'));
+const InventoryTab        = lazy(() => import('@components/InventoryTab/InventoryTab.jsx'));
 
 const TAB_KEYS = getAllTabKeys();
 
@@ -35,6 +37,7 @@ export default function App() {
   const { groups: foodCostGroups, foodCostByDay, foodCostByMonth, upsertGroup: upsertFoodCostGroup, clearAll: clearAllFoodCost } = useFoodCostStore();
   const opCosts = useOperatingCostsStore();
   const recipes = useRecipeStore();
+  const inventory = useInventoryStore();
 
   // Ingredient names + per-unit costs derived from food cost imports.
   // Used by RecipeTab to suggest unit costs when the user types an ingredient name.
@@ -75,6 +78,7 @@ export default function App() {
     clearAllFoodCost();
     opCosts.clearAll();
     recipes.clearAll();
+    inventory.clearAll();
     // item-costs lives in an App-level useLocalStore, so just removing the key
     // isn't enough — the store's beforeunload flush would write the in-memory
     // copy straight back. Reset the state so the flush writes an empty map.
@@ -190,6 +194,7 @@ export default function App() {
               onSetLaborForMonth={opCosts.setLaborForMonth}
               onSetFixedForMonth={opCosts.setFixedForMonth}
               onUpsertRecipes={recipes.upsertRecipes}
+              onUpsertInventory={inventory.upsertDemo}
               foodCostByDay={foodCostByDay}
             />
           )}
@@ -264,6 +269,12 @@ export default function App() {
               updateIngredient={recipes.updateIngredient}
               removeIngredient={recipes.removeIngredient}
               ingredientSuggestions={ingredientSuggestions}
+            />
+          )}
+          {activeTab === 'inventory' && (
+            <InventoryTab
+              inventory={inventory}
+              foodCostGroups={foodCostGroups}
             />
           )}
           {activeTab === 'scanner' && (
