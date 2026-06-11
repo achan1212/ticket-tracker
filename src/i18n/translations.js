@@ -434,6 +434,21 @@ export const translations = {
     comparePriorPeriod: 'Prior Period',
     compareFoodCostPrior: 'Prior Food Cost',
 
+    // Dashboard color customization
+    colorEditBtn: 'Edit Colors',
+    colorDoneBtn: 'Done',
+    colorEditTooltip: 'Customize dashboard colors',
+    colorEditorTitle: 'Customize Dashboard Colors',
+    colorEditorReset: 'Reset to Default',
+    colorEditorChartSection: 'Chart Colors',
+    colorEditorPlatformSection: 'Platform Colors',
+    colorAccent: 'Accent Color',
+    colorDelivery: 'Delivery Color',
+    colorPickup: 'Pickup Color',
+    colorFoodCost: 'Food Cost Color',
+    colorDirect: 'Direct Orders',
+    colorPickerEditTitle: 'Edit color',
+
     // Excel import/export
     exportLabel: 'Export to Excel',
     exportSub: 'Downloads',
@@ -933,6 +948,21 @@ export const translations = {
     comparePriorPeriod: '对比期',
     compareFoodCostPrior: '对比食材成本',
 
+    // Dashboard color customization
+    colorEditBtn: '编辑颜色',
+    colorDoneBtn: '完成',
+    colorEditTooltip: '自定义仪表板颜色',
+    colorEditorTitle: '自定义仪表板颜色',
+    colorEditorReset: '恢复默认',
+    colorEditorChartSection: '图表颜色',
+    colorEditorPlatformSection: '平台颜色',
+    colorAccent: '强调色',
+    colorDelivery: '外送颜色',
+    colorPickup: '自取颜色',
+    colorFoodCost: '食材成本颜色',
+    colorDirect: '直接订单',
+    colorPickerEditTitle: '编辑颜色',
+
     // Excel import/export
     exportLabel: '导出为Excel',
     exportSub: '下载',
@@ -1431,6 +1461,21 @@ export const translations = {
     compareYoy: 'AaA',
     comparePriorPeriod: 'Período Anterior',
     compareFoodCostPrior: 'Costo Ant.',
+
+    // Dashboard color customization
+    colorEditBtn: 'Editar Colores',
+    colorDoneBtn: 'Listo',
+    colorEditTooltip: 'Personalizar los colores del panel',
+    colorEditorTitle: 'Personalizar Colores del Panel',
+    colorEditorReset: 'Restablecer Predeterminados',
+    colorEditorChartSection: 'Colores de Gráficos',
+    colorEditorPlatformSection: 'Colores de Plataformas',
+    colorAccent: 'Color de Acento',
+    colorDelivery: 'Color de Entrega',
+    colorPickup: 'Color de Recogida',
+    colorFoodCost: 'Color de Costo de Alimentos',
+    colorDirect: 'Pedidos Directos',
+    colorPickerEditTitle: 'Editar color',
 
     // Excel import/export
     exportLabel: 'Exportar a Excel',

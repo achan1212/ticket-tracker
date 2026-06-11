@@ -139,7 +139,7 @@ Second audit pass, covering code added after the May audit (dashboard color
 customization, Recipe tab, Excel export) plus a UX/perf sweep. Work is batched
 into three PRs; status updated as each lands.
 
-### PR batch 1 — Color customization fixes (#1, #2, #5, #7) — ⏳ planned
+### PR batch 1 — Color customization fixes (#1, #2, #5, #7) — ✅ in PR (`fix/color-customization-audit`)
 
 **#1 — Custom colors ignore theme (documented bug class)**
 - [src/components/Dashboard/useDashboardColors.js](src/components/Dashboard/useDashboardColors.js) `getColor` returns the same custom hex for dark AND light themes. A color picked in dark mode (e.g. neon yellow) is illegible in light mode — exactly the "dark hex leaked into light mode" bug class from the May audit.

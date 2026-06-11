@@ -228,10 +228,10 @@ export default function Dashboard({ dailySummary, days, months, foodCostByDay = 
         <button
           className={`dash-edit-colors-btn ${isEditingColors ? 'active' : ''}`}
           onClick={() => setIsEditingColors(!isEditingColors)}
-          title="Customize dashboard colors"
+          title={t.colorEditTooltip || 'Customize dashboard colors'}
         >
           <span className="edit-icon">🎨</span>
-          {isEditingColors ? 'Done' : 'Edit Colors'}
+          {isEditingColors ? (t.colorDoneBtn || 'Done') : (t.colorEditBtn || 'Edit Colors')}
         </button>
       </div>
 
