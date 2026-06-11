@@ -52,13 +52,36 @@ export default function App() {
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [foodCostGroups]);
 
+  // Every DATA key the danger-zone wipe must cover. Preference keys
+  // (dashboard-colors — like theme/language) intentionally survive clear-all.
+  const CLEAR_ALL_EXTRA_KEYS = [
+    'pl-targets',
+    'item-costs',
+    'menu-item-costs',
+    'scanner-results',
+    'scanner-manual-items',
+    'scanner-edits',
+    'scanner-removed',
+    'scanner-order',
+    'scanner-rawtext',
+    'scanner-file-name',
+    'scanner-detected-date',
+    'scanner-show-results',
+  ];
+
   const handleClearAllData = () => {
     clearAllDays();
     clearAllMonths();
     clearAllFoodCost();
     opCosts.clearAll();
     recipes.clearAll();
-    try { localStorage.removeItem('ticket-tracker:pl-targets'); } catch { /* quota / private browsing */ }
+    // item-costs lives in an App-level useLocalStore, so just removing the key
+    // isn't enough — the store's beforeunload flush would write the in-memory
+    // copy straight back. Reset the state so the flush writes an empty map.
+    setItemCosts({});
+    try {
+      CLEAR_ALL_EXTRA_KEYS.forEach(k => localStorage.removeItem(`ticket-tracker:${k}`));
+    } catch { /* quota / private browsing */ }
     // Reload so every component re-reads from a clean localStorage. The stores
     // above already cleared their in-memory state, but child components like
     // ProfitLossTab read their own slice via useLocalStore and would otherwise

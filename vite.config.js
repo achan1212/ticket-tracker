@@ -18,6 +18,7 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           xlsx: ['xlsx'],
           pdfjs: ['pdfjs-dist'],
+          recharts: ['recharts'],
         },
       },
     },
