@@ -178,3 +178,14 @@
   .day-form-grid { grid-template-columns: 1fr; gap: 1rem; }
   .day-form-row { flex-wrap: wrap; }
 }
+
+/* Demo-load success banner (replaces the old blocking alert) */
+.ds-demo-feedback {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  background: rgba(74,222,128,0.1);
+  border: 1px solid rgba(74,222,128,0.3);
+  color: #4ade80;
+}

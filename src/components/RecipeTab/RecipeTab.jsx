@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useLang } from '../../i18n/LangContext.jsx';
-import { formatCurrency } from '@utils/helpers';
 import './RecipeTab.css';
 
 function lineCost(ing) {
@@ -24,7 +23,7 @@ export default function RecipeTab({
   removeIngredient,
   ingredientSuggestions = [],
 }) {
-  const { t } = useLang();
+  const { t, formatCurrency } = useLang();
   const [activeId, setActiveId] = useState(null);
   const [newName, setNewName] = useState('');
 
