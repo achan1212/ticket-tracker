@@ -139,7 +139,7 @@ Second audit pass, covering code added after the May audit (dashboard color
 customization, Recipe tab, Excel export) plus a UX/perf sweep. Work is batched
 into three PRs; status updated as each lands.
 
-### PR batch 1 — Color customization fixes (#1, #2, #5, #7) — ✅ in PR (`fix/color-customization-audit`)
+### PR batch 1 — Color customization fixes (#1, #2, #5, #7) — ✅ MERGED (PR #5, `0c302fa`)
 
 **#1 — Custom colors ignore theme (documented bug class)**
 - [src/components/Dashboard/useDashboardColors.js](src/components/Dashboard/useDashboardColors.js) `getColor` returns the same custom hex for dark AND light themes. A color picked in dark mode (e.g. neon yellow) is illegible in light mode — exactly the "dark hex leaked into light mode" bug class from the May audit.
@@ -157,7 +157,7 @@ into three PRs; status updated as each lands.
 - `setCustomColors({ ...customColors, [key]: value })` drops writes during rapid native-picker drags.
 - Fix: functional form `prev => ({ ...prev, [key]: value })`.
 
-### PR batch 2 — Recipe locale + demo-load UX (#3, #6) — ✅ in PR (`fix/recipe-locale-demo-ux`)
+### PR batch 2 — Recipe locale + demo-load UX (#3, #6) — ✅ MERGED (PR #6, `b28fb2a`)
 
 **#3 — RecipeTab regressed to raw `formatCurrency`**
 - [RecipeTab.jsx](src/components/RecipeTab/RecipeTab.jsx) imports from `@utils/helpers` instead of destructuring the locale-bound version from `useLang()` (the pattern every other component uses). Plate costs don't follow the active locale.
@@ -165,7 +165,7 @@ into three PRs; status updated as each lands.
 **#6 — `alert()` on demo load**
 - [DailySummaryTable.jsx](src/components/DailySummaryTable/DailySummaryTable.jsx) `handleLoadDemo` calls blocking, unstyled `alert()`. Replace with an inline success banner (same pattern as sheet-feedback).
 
-### PR batch 3 — Clear-all completeness + chunk naming (#4, #8) — ✅ in PR (`fix/clear-all-completeness`)
+### PR batch 3 — Clear-all completeness + chunk naming (#4, #8) — ✅ MERGED (PR #7, `474034a`)
 
 **#4 — Clear-all leaves data behind**
 - `handleClearAll` in [App.jsx](src/App.jsx) misses: all nine `scanner-*` keys (results, manual-items, edits, removed, order, rawtext, file-name, detected-date, show-results), `item-costs`, `menu-item-costs`. Danger-zone copy promises a full wipe.
