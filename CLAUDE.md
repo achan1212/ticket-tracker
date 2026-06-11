@@ -64,7 +64,7 @@ Reference for future planning; don't re-implement.
 [src/utils/demoData.js](src/utils/demoData.js). `generateDemoDays()` returns 90 days of plausible records (weekend bumps, upward trend, ~$450–550/day, platform split DD 40 / Uber 35 / Grubhub 25). `generateDemoFoodCostGroups()` returns ~26 import groups with realistic SKUs from 4 rotating suppliers (Sysco / US Foods / Restaurant Depot / Performance Food) at ~28% of demo revenue. Both are loaded by the "Load Demo Data" button on the Daily Summary empty state. Demo group IDs are deterministic (`demo-fc-YYYY-MM-DD`) → idempotent re-loads.
 
 ### Destructive actions
-Clear-all-data lives in the **Sheets tab → bottom danger zone**. Two `window.confirm`s, then wipes order/monthly/food-cost stores + `pl-targets`, then `window.location.reload()` so components reading their own `useLocalStore` slices come back clean.
+Clear-all-data lives in the **Sheets tab → bottom danger zone** (inline two-click `DangerConfirmButton`). Wipes order/monthly/food-cost/operating-costs/recipe stores plus the extra data keys (`pl-targets`, `item-costs`, `menu-item-costs`, all `scanner-*`), then `window.location.reload()` so components reading their own `useLocalStore` slices come back clean. **Preference keys survive on purpose**: `dashboard-colors` (like theme/language). Gotcha: a key owned by an always-mounted `useLocalStore` (e.g. App-level `item-costs`) must also have its in-memory state reset — the hook's `beforeunload` flush would otherwise write the old value back after `removeItem`.
 
 ### Build
 `npm run build` (Vite). Lazy-loaded route chunks per tab. Lint/type-check is part of the build.
@@ -165,7 +165,7 @@ into three PRs; status updated as each lands.
 **#6 — `alert()` on demo load**
 - [DailySummaryTable.jsx](src/components/DailySummaryTable/DailySummaryTable.jsx) `handleLoadDemo` calls blocking, unstyled `alert()`. Replace with an inline success banner (same pattern as sheet-feedback).
 
-### PR batch 3 — Clear-all completeness + chunk naming (#4, #8) — ⏳ planned
+### PR batch 3 — Clear-all completeness + chunk naming (#4, #8) — ✅ in PR (`fix/clear-all-completeness`)
 
 **#4 — Clear-all leaves data behind**
 - `handleClearAll` in [App.jsx](src/App.jsx) misses: all nine `scanner-*` keys (results, manual-items, edits, removed, order, rawtext, file-name, detected-date, show-results), `item-costs`, `menu-item-costs`. Danger-zone copy promises a full wipe.
