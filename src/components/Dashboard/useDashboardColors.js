@@ -24,16 +24,28 @@ const DEFAULT_COLORS = {
   platformDirect: PLATFORM_COLORS.direct,
 };
 
-// Hook to manage dashboard color customization
+// Hook to manage dashboard color customization.
+//
+// Custom colors are stored PER THEME — `{ dark: {...}, light: {...} }` — and a
+// custom value only overrides the theme it was set in. A neon accent picked in
+// dark mode must not leak into light mode (same bug class as the May audit's
+// "dark hex constants leaked into light mode" finding).
 export function useDashboardColors(isDark) {
   const [customColors, setCustomColors] = useLocalStore('dashboard-colors', {
-    version: 1,
-    initial: {},
+    version: 2,
+    initial: { dark: {}, light: {} },
+    // v1 stored a flat { key: hex } map with no theme split. Those values were
+    // (almost certainly) picked in dark mode — the editor shipped with dark
+    // defaults — so they migrate into the dark bucket.
+    migrate: (prev) => ({ dark: prev || {}, light: {} }),
   });
 
-  // Get effective color (custom or default, theme-aware)
+  const themeKey = isDark ? 'dark' : 'light';
+  const activeCustom = customColors?.[themeKey] || {};
+
+  // Get effective color: active theme's custom value, else theme default.
   const getColor = (key, lightKey) => {
-    if (customColors[key]) return customColors[key];
+    if (activeCustom[key]) return activeCustom[key];
     if (!isDark && lightKey && DEFAULT_COLORS[lightKey]) return DEFAULT_COLORS[lightKey];
     return DEFAULT_COLORS[key] || DEFAULT_COLORS[key + 'Light'];
   };
@@ -56,26 +68,35 @@ export function useDashboardColors(isDark) {
     direct:   getColor('platformDirect'),
   };
 
-  // Update a specific color
+  // Update a specific color in the active theme's bucket. Functional setter:
+  // the native color picker fires a burst of change events while dragging, and
+  // a stale-closure spread would drop writes.
   const updateColor = (key, value) => {
-    setCustomColors({ ...customColors, [key]: value });
+    setCustomColors(prev => {
+      const base = prev && prev.dark ? prev : { dark: {}, light: {} };
+      return { ...base, [themeKey]: { ...base[themeKey], [key]: value } };
+    });
   };
 
-  // Reset all colors to default
+  // Reset the ACTIVE theme's colors to default. The editor only shows the
+  // current theme's values, so resetting the other theme's (invisible)
+  // customizations here would be surprising.
   const resetColors = () => {
-    setCustomColors({});
+    setCustomColors(prev => ({ ...(prev || { dark: {}, light: {} }), [themeKey]: {} }));
   };
 
-  // Get all customizable colors with labels
+  // Customizable colors. `labelKey` is resolved through translations by the
+  // editor; `fallback` keeps brand names / English when a key is missing.
   const getEditableColors = () => [
-    { key: 'accent', label: 'Accent Color', value: C.accent },
-    { key: 'delivery', label: 'Delivery Color', value: C.delivery },
-    { key: 'pickup', label: 'Pickup Color', value: C.pickup },
-    { key: 'foodCost', label: 'Food Cost Color', value: C.foodCost },
-    { key: 'platformDoordash', label: 'DoorDash', value: platformColors.doordash },
-    { key: 'platformUbereats', label: 'Uber Eats', value: platformColors.ubereats },
-    { key: 'platformGrubhub', label: 'Grubhub', value: platformColors.grubhub },
-    { key: 'platformDirect', label: 'Direct Orders', value: platformColors.direct },
+    { key: 'accent',           labelKey: 'colorAccent',   fallback: 'Accent Color',    value: C.accent },
+    { key: 'delivery',         labelKey: 'colorDelivery', fallback: 'Delivery Color',  value: C.delivery },
+    { key: 'pickup',           labelKey: 'colorPickup',   fallback: 'Pickup Color',    value: C.pickup },
+    { key: 'foodCost',         labelKey: 'colorFoodCost', fallback: 'Food Cost Color', value: C.foodCost },
+    // Brand names are proper nouns — not translated.
+    { key: 'platformDoordash', labelKey: null,            fallback: 'DoorDash',        value: platformColors.doordash },
+    { key: 'platformUbereats', labelKey: null,            fallback: 'Uber Eats',       value: platformColors.ubereats },
+    { key: 'platformGrubhub',  labelKey: null,            fallback: 'Grubhub',         value: platformColors.grubhub },
+    { key: 'platformDirect',   labelKey: 'colorDirect',   fallback: 'Direct Orders',   value: platformColors.direct },
   ];
 
   return {
@@ -84,6 +105,6 @@ export function useDashboardColors(isDark) {
     updateColor,
     resetColors,
     getEditableColors,
-    hasCustomColors: Object.keys(customColors).length > 0,
+    hasCustomColors: Object.keys(activeCustom).length > 0,
   };
 }
