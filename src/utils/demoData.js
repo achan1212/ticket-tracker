@@ -283,3 +283,66 @@ export function generateDemoRecipes() {
     })),
   }));
 }
+
+// Demo inventory: eight stocked items matching the food-cost catalog SKUs,
+// with three weeks of dated movements (weekly restocks + usage every few
+// days). Three items (chicken, beef, mozzarella) net out at/below par so the
+// low-stock badge has something to show. Deterministic IDs (`demo-inv-*`)
+// merged via upsertDemo → idempotent re-loads that never touch user rows.
+export function generateDemoInventory() {
+  const dayISO = (daysBack) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysBack);
+    return d.toISOString().slice(0, 10);
+  };
+
+  // [slug, name, unit, par, restockQty, usagePerEntry]
+  // Net on-hand = 3 restocks − 7 usage entries.
+  const ITEMS = [
+    ['chicken-breast', 'Chicken Breast (10 lb)',   'case', 4, 3, 1.2],
+    ['ground-beef',    'Ground Beef (5 lb)',       'case', 3, 3, 1],
+    ['mozzarella',     'Mozzarella Cheese (5 lb)', 'case', 5, 4, 1.6],
+    ['pasta',          'Pasta (10 lb case)',       'case', 2, 3, 0.8],
+    ['tomato-sauce',   'Tomato Sauce (1 gal)',     'jug',  3, 4, 1],
+    ['pizza-dough',    'Pizza Dough Mix (25 lb)',  'bag',  2, 3, 0.7],
+    ['olive-oil',      'Olive Oil (1 gal)',        'jug',  1, 2, 0.3],
+    ['takeout',        'Takeout Containers (250)', 'case', 2, 3, 0.6],
+  ];
+
+  const RESTOCK_DAYS = [19, 12, 5];          // weekly deliveries
+  const USAGE_DAYS   = [17, 14, 11, 9, 6, 3, 1];
+
+  const items = ITEMS.map(([slug, name, unit, par]) => ({
+    id: `demo-inv-${slug}`,
+    name, unit,
+    parLevel: par,
+  }));
+
+  const movements = [];
+  for (const [slug, , , , restockQty, usagePerEntry] of ITEMS) {
+    RESTOCK_DAYS.forEach((daysBack, i) => {
+      movements.push({
+        id: `demo-inv-mv-${slug}-r${i}`,
+        itemId: `demo-inv-${slug}`,
+        date: dayISO(daysBack),
+        type: 'restock',
+        quantity: restockQty,
+        note: 'Weekly delivery',
+        source: 'demo',
+      });
+    });
+    USAGE_DAYS.forEach((daysBack, i) => {
+      movements.push({
+        id: `demo-inv-mv-${slug}-u${i}`,
+        itemId: `demo-inv-${slug}`,
+        date: dayISO(daysBack),
+        type: i === 3 ? 'waste' : 'usage', // one waste entry per item for variety
+        quantity: usagePerEntry,
+        note: '',
+        source: 'demo',
+      });
+    });
+  }
+
+  return { items, movements };
+}

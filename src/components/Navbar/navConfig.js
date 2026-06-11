@@ -15,6 +15,7 @@ export const NAV_GROUPS = [
       { key: 'monthly',  labelKey: 'tabMonthly',  icon: '📅' },
       { key: 'scanner',  labelKey: 'tabScanner',  icon: '📷' },
       { key: 'foodcost', labelKey: 'tabFoodCost', icon: '🛒' },
+      { key: 'inventory', labelKey: 'tabInventory', icon: '📦' },
       { key: 'opcosts',  labelKey: 'tabOpCosts',  icon: '💵' },
     ],
   },
