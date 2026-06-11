@@ -157,7 +157,7 @@ into three PRs; status updated as each lands.
 - `setCustomColors({ ...customColors, [key]: value })` drops writes during rapid native-picker drags.
 - Fix: functional form `prev => ({ ...prev, [key]: value })`.
 
-### PR batch 2 — Recipe locale + demo-load UX (#3, #6) — ⏳ planned
+### PR batch 2 — Recipe locale + demo-load UX (#3, #6) — ✅ in PR (`fix/recipe-locale-demo-ux`)
 
 **#3 — RecipeTab regressed to raw `formatCurrency`**
 - [RecipeTab.jsx](src/components/RecipeTab/RecipeTab.jsx) imports from `@utils/helpers` instead of destructuring the locale-bound version from `useLang()` (the pattern every other component uses). Plate costs don't follow the active locale.

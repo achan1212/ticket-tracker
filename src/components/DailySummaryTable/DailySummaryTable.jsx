@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import PlatformBreakdown from '@components/PlatformBreakdown/PlatformBreakdown';
 import RevenueForm from '@components/RevenueForm/RevenueForm.jsx';
 import { useLang } from '../../i18n/LangContext.jsx';
@@ -21,6 +21,11 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
   const [addingDate, setAddingDate]   = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [filterType, setFilterType]   = useState('all');
+  // Success banner shown after demo data loads — replaces the old blocking
+  // alert(). Auto-dismisses after a few seconds.
+  const [demoFeedback, setDemoFeedback] = useState(null);
+  const demoFeedbackTimer = useRef(null);
+  useEffect(() => () => clearTimeout(demoFeedbackTimer.current), []);
 
   const handleLoadDemo = () => {
     const confirmed = window.confirm(t.loadDemoConfirm || 'Load 90 days of demo data? This will be added to your records.');
@@ -39,7 +44,9 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
       const demoFixed = generateDemoFixedCosts(demoData);
       Object.entries(demoFixed).forEach(([month, items]) => onSetFixedForMonth(month, items));
     }
-    alert(t.loadDemoSuccess || 'Demo data loaded!');
+    setDemoFeedback(`✓ ${t.loadDemoSuccess || 'Demo data loaded!'}`);
+    clearTimeout(demoFeedbackTimer.current);
+    demoFeedbackTimer.current = setTimeout(() => setDemoFeedback(null), 5000);
   };
 
   const handleAddSave = (data) => {
@@ -63,6 +70,10 @@ export default function DailySummaryTable({ dailySummary, days, onUpsertDay, onR
   return (
     <div className="daily-summary">
       <h2 className="page-title">{t.tabSummary}</h2>
+
+      {demoFeedback && (
+        <div className="ds-demo-feedback" role="status">{demoFeedback}</div>
+      )}
 
       <div className="ds-controls">
         <div className="ds-filter-pills">
