@@ -187,3 +187,70 @@ into three PRs; status updated as each lands.
 - Excel Dashboard-sheet export code: clean.
 - RecipeTab a11y (aria-labels, keyboard-expandable cards): done well.
 - Recipe i18n keys: present in all three locales.
+
+---
+
+## Backend Plan (2026-06-14) — NOT STARTED
+
+Optional sync/backup layer. The app stays **offline-first**: `useLocalStore` remains the
+local source of truth, the backend is a replica. Both backends are **$0** and **opt-in** —
+signed-out behavior is byte-for-byte today's app.
+
+### Core insight
+Persistence is already backend-shaped: every store serializes to a versioned JSON envelope
+(`{ v, data }`) under ~10 known namespaces (`days`, `months`, `foodcost-groups`, `inventory`,
+`recipes`, `operating-costs`, …). The backend is a **per-namespace blob sync**, NOT a relational
+remodel. One serialization contract, two pluggable adapters.
+
+```
+useLocalStore (unchanged, local-first)
+        │  envelope { v, data } per namespace
+        ▼
+   syncEngine.js  ──► SupabaseAdapter  (auto, live, last-write-wins)
+                  └─► DriveAdapter      (manual or auto, whole-bundle)
+```
+Adapter contract: `pull()` / `push(namespace, envelope)` / `pushAll()`. Restoring an older backup
+flows through `useLocalStore`'s existing `migrate()` because the envelope carries `version`.
+
+### Two backends, different roles (a user can enable either/both)
+- **Supabase** — live multi-device sync replica; data lives in *our* project. Convenience layer.
+- **Google Drive** — user-owned backup / restore / portability; data lives in the *user's* Drive.
+  Trust + disaster-recovery layer (the app currently has none beyond the Excel export).
+
+### Supabase specifics
+- Single table `store_blobs (user_id, namespace, version, data jsonb, updated_at)`, PK
+  `(user_id, namespace)`, **row-level security** `auth.uid() = user_id`. Auto-generated REST API —
+  no server code. Magic-link email auth (no passwords, no mail server).
+- Free tier (verified 2026-06): 500MB DB, 50K MAU, unlimited API requests. **Pauses after 1 week
+  of DB inactivity** — mitigated by daily restaurant writes + an optional GitHub Actions weekly
+  keep-alive cron. Our data volume is ~0.1% of the cap.
+- Conflict policy v1: last-write-wins per namespace (one owner, 2–3 devices). v2 if needed:
+  per-key merge for `days`/`months` (keyed objects).
+
+### Google Drive specifics
+- **Scope `drive.file` ONLY** — this is the load-bearing decision. It is **non-sensitive**, grants
+  access only to app-created files, and therefore **skips Google's paid security assessment**. A
+  broader scope (e.g. listing existing files) flips the app into restricted/sensitive territory and
+  triggers verification — **never widen it**.
+- Google Identity Services token client in-browser (SPA flow, no client secret, no backend).
+- One bundle file `tickettracker-backup.json` holding all envelopes (simpler than per-namespace).
+- Manual first: "Back up / Restore to Google Drive" buttons in the **Sheets tab** beside the Excel
+  export. Restore = sign in, pull bundle, rehydrate every namespace, reload. Optional auto-backup
+  later (same debounced hook as Supabase).
+
+### Phased rollout
+1. **Phase 1 (½ day + ~1 day)** — shared `syncEngine` + envelope contract, then `DriveAdapter`
+   first (lowest risk: OAuth + file read/write, no DB/auth/RLS). Ship backup/restore buttons.
+2. **Phase 2 (1–2 days)** — Supabase project, `store_blobs` + RLS, magic-link auth,
+   `SupabaseAdapter`, live auto-sync, signed-in/out UI.
+3. **Phase 3 (1 day)** — auto-backup toggles, sync-status indicator (reuse `tt:storage-error`
+   event pattern), keep-alive cron, docs. i18n ×3 throughout (~10–15 new keys).
+
+### Notes / risks
+- Introduces the project's first env config: Supabase URL + anon key, Google OAuth client ID. **All
+  three are public-by-design and client-safe** (RLS / `drive.file` do the enforcement) — but this
+  ends the "no API keys" line in the Project header; update it when Phase 1 lands.
+- Portability preserved: the blob contract ports to Cloudflare D1 / PocketBase (replacing Supabase)
+  or Dropbox / local-file (replacing Drive) without touching any store.
+- Cheaper alternatives considered and rejected for now: Cloudflare D1 (must hand-roll auth + email),
+  Firebase (NoSQL remodel, lock-in), PocketBase on a VPS (~$4/mo, you babysit a server).
