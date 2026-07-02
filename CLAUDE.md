@@ -280,6 +280,25 @@ OCR step and the regex parsing, which is where most Scanner bugs live. Verified 
 - **Limits drift**: free tiers change without notice; the Edge Function proxy means swapping
   providers never touches the client.
 
+### File storage (xlsx / Google Sheets)
+Both backends can store the app's generated files; they serve different audiences. Verified 2026-07.
+- **Drive, raw .xlsx**: upload the existing `exportToXlsx` output as-is — plain `drive.file` upload,
+  already covered by Phase 1's OAuth.
+- **Drive, native Google Sheet**: upload the same xlsx with target mimeType
+  `application/vnd.google-apps.spreadsheet` and Drive converts it to a real, user-editable Sheet.
+  Stays within the **non-sensitive `drive.file` scope** (app-created file) — do NOT reach for the
+  Sheets API's `spreadsheets` scope (sensitive-classified) just to create/refresh a Sheet.
+  Round-trip: Drive can export the Sheet back to xlsx
+  (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`) → existing `importFromXlsx`.
+  Product hook: an "Export to Google Sheets" button that drops a live spreadsheet in the user's
+  Drive, reusing the chart-tips copy already on the Sheets tab.
+- **Supabase Storage**: 1GB free, RLS-scoped buckets — right home for account-tied snapshot
+  archives (e.g. keep the last N exports), not for user-editable spreadsheets.
+- **Fidelity caveat**: the xlsx round-trip contract only covers the Daily/Monthly Summary sheets
+  (see "Sheets export — round-trip contract" above). Excel/Sheet copies are human-facing views and
+  partial re-import; the **JSON bundle remains the only full-fidelity restore artifact**. Both
+  should exist — they serve different needs (accountant vs. disaster recovery).
+
 ### Notes / risks
 - Introduces the project's first env config: Supabase URL + anon key, Google OAuth client ID. **All
   three are public-by-design and client-safe** (RLS / `drive.file` do the enforcement) — but this
