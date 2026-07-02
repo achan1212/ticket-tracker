@@ -245,6 +245,40 @@ flows through `useLocalStore`'s existing `migrate()` because the envelope carrie
    `SupabaseAdapter`, live auto-sync, signed-in/out UI.
 3. **Phase 3 (1 day)** — auto-backup toggles, sync-status indicator (reuse `tt:storage-error`
    event pattern), keep-alive cron, docs. i18n ×3 throughout (~10–15 new keys).
+4. **Phase 4 (optional, depends on Phase 2)** — cloud image analysis for the Scanner (below).
+
+### Image analysis APIs (Scanner upgrade path) — free options + rate limits
+Today the Scanner runs Tesseract.js fully client-side (free, offline, but raw-text OCR + brittle
+regex parsing). With the backend in place, cloud image analysis becomes possible — the enabler is
+**key custody**: these API keys are SECRET (unlike the anon key / OAuth client ID) and must never
+ship in the SPA. A **Supabase Edge Function** (free tier: 500K invocations/month) holds the key and
+proxies `image → structured JSON` for signed-in users.
+
+**Recommended: Gemini Flash free tier** (no credit card required). Multimodal + JSON mode means the
+model returns structured line items (`{ name, cost, quantity, date }`) directly — replacing BOTH the
+OCR step and the regex parsing, which is where most Scanner bugs live. Verified 2026-07:
+
+| Provider (free tier) | Rate limits | Notes |
+|---|---|---|
+| **Gemini Flash** ✅ | ~10 req/min · 250K tokens/min · **1,500 req/day**, resets midnight PT | Multimodal, JSON mode, no card. Limits are **per project, not per user**, and Google revises them without notice (Pro models were dropped from free tier Apr 2026) |
+| OCR.space | 25,000 req/month (~500/day), **1MB file cap** | Pure OCR — keeps the existing regex parser; simplest swap-in |
+| Google Cloud Vision | 1,000 units/month | Rejected: requires a billing account (card on file) |
+
+**Rate-limit issues & mitigations (design these in from day one):**
+- **Shared-quota problem**: free-tier RPD is per API key/project — every user of the app drains the
+  same 1,500/day. Fine for a handful of restaurants (~30 scans/day each); a real multi-tenant
+  rollout needs the paid tier (~$0.10/1K receipt images at Flash pricing) or per-user keys.
+- **429 handling**: Edge Function returns the provider's `retry-after`; client queues the scan and
+  retries with exponential backoff. Scans are already async with a progress UI — reuse it.
+- **Per-user cap**: enforce a daily per-user counter in the Edge Function (e.g. 50 scans/user/day)
+  so one user can't drain the shared project quota.
+- **Shrink requests**: downscale/compress images client-side before upload (canvas already exists
+  for the preview); one request per ticket, batching multi-page PDFs into a single call.
+- **Fallback chain keeps offline-first intact**: Gemini → OCR.space → **local Tesseract** (already
+  shipped). Rate-limited, offline, or signed-out users silently get today's behavior — cloud
+  analysis is an enhancement, never a dependency.
+- **Limits drift**: free tiers change without notice; the Edge Function proxy means swapping
+  providers never touches the client.
 
 ### Notes / risks
 - Introduces the project's first env config: Supabase URL + anon key, Google OAuth client ID. **All
