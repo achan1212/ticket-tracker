@@ -4,15 +4,77 @@
 - Use conservative, deterministic code — temperature 0.1 to 0.2 max.
 - No experimental patterns, creative abstractions, or novel approaches.
 - When multiple valid solutions exist, choose the most conventional and widely-accepted one.
+- Copy the patterns already in this codebase before inventing one: find the most similar
+  existing component/hook/util and mirror its structure, naming, and file layout.
+- Plain JavaScript + JSX only — no TypeScript syntax, no new build tooling, no new
+  state-management libraries. `useLocalStore` + React state is the entire state story.
+- Do not add dependencies. The allowed stack is what's in package.json (react,
+  react-router-dom, recharts, xlsx, tesseract.js). If a task seems to need a new
+  package, stop and ask.
 
 ## Before Writing Code or Running Commands
 - Always output your thought process first: what you're building, why you made each key decision, and what you're uncertain about.
 - Do not act before the plan is stated.
+- Read the target file AND at least one sibling (similar component/hook) before editing.
+  Never edit a file you haven't read in this session.
+- List the files you expect to touch in the plan. If mid-task you need files outside
+  that list, say so before editing them.
+
+## Scope and Efficiency
+- Make the smallest diff that completes the task. Do not refactor, rename, reformat, or
+  "improve" code you weren't asked to change — even if it looks wrong. Note it instead.
+- One task = one commit (or a few logically separate commits). Never bundle an unrelated
+  fix into a feature commit.
+- Prefer editing existing files over creating new ones. New component = new folder under
+  `src/components/<Name>/` with `<Name>.jsx` + `<Name>.css`, registered lazily in
+  App.jsx — only when the task genuinely adds a screen/panel.
+- Do not write speculative props, options, or abstractions for imagined future needs.
+  Build exactly what the task requires.
+
+## Project Invariants — violating any of these is a bug, no exceptions
+1. **i18n ×3**: every user-visible string is `t.someKey`, and every new key is added to
+   ALL THREE locales (`en`, `zh`, `es`) in `src/i18n/translations.js` in the same edit.
+   A key in one locale renders `undefined` in the others.
+2. **Theme colors inside the component**: derive chart/accent colors via `useTheme()`
+   per render. NEVER module-level color constants — dark hexes leak into light mode
+   (this was a real shipped bug).
+3. **CSS variables**: use only the existing tokens (`--surface`, `--surface2`,
+   `--border`, `--text`, `--text-muted`, `--accent`, `--accent-dim`, `--accent-on`,
+   `--danger`). Do not invent new var names — unknown vars fail silently.
+4. **Persistence only through `useLocalStore`**: never call `localStorage` directly in
+   components (read-only helpers like the pl-targets export reader are the documented
+   exception). Changing a stored shape incompatibly requires a `version` bump + `migrate`.
+5. **Functional state updates**: `setX(prev => ...)` whenever the next value depends on
+   the previous one. Spreading a captured variable (`setX({ ...x, k: v })`) drops rapid
+   writes (this was a real shipped bug).
+6. **No side effects in `useMemo`**: `useMemo` returns a value, never calls a setter.
+   Setter-on-change belongs in `useEffect` (this was a real shipped bug).
+7. **Stable keys and IDs**: React keys and store record IDs come from stable data
+   (dates, slugs, uids) — never array indexes. Demo/import generators use deterministic
+   IDs so re-runs replace instead of duplicating.
+8. **`source` tags**: records carry `source: 'manual' | 'imported' | 'demo'` (+ `'api'`
+   planned). Anything that writes records must set it; anything that overwrites must
+   respect it (manual wins).
+9. **New tab = navConfig entry + lazy import + render block in App.jsx.** Nothing else;
+   the Navbar and MobileDrawer read the config.
+10. **Money and dates**: currency displays through `formatCurrency` from `useLang()`
+    (locale-aware) — never `toFixed(2)` string-building. Dates/months are compared as
+    `YYYY-MM-DD` / `YYYY-MM` strings; never construct `new Date()` from these for
+    comparisons (month-length and TZ bugs — both shipped once).
+
+## Verify Before You Commit
+- Run `npm run build` — it includes lint; a task is not done with a failing build.
+- Re-read your full diff (`git diff`) before committing: check every invariant above
+  against it, and confirm no debug logs, commented-out code, or stray files.
+- If you added a translation key, grep it in translations.js and count 3 hits.
+- State plainly what you did NOT verify (e.g. "not tested in light mode") instead of
+  implying complete verification.
 
 ## Sources and Uncertainty
 - Verify package versions, API compatibility, and dependency requirements from official sources (npm, GitHub releases, official docs) before using them.
 - Do not guess version numbers, API signatures, or compatibility — check first.
 - If something is unknown or uncertain, ask rather than assume.
+- If a rule here seems to conflict with the task, ask — do not silently pick one.
 
 ---
 
