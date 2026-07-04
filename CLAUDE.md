@@ -374,3 +374,108 @@ Platform / POS APIs  ──►  Supabase Edge Function (per-provider connector)
   sync status, conflict dialog, per-provider names stay untranslated).
 - **`source` enum widens** to `'manual' | 'imported' | 'demo' | 'api'` — audit every
   switch on `source` (badges, importer, demo replace logic) when Phase A lands.
+
+---
+
+## CSV → Menu Ingestion Plan (2026-07-04) — NOT STARTED
+
+Detailed design for Phase D of the API plan: read platform CSV exports **accurately** and
+connect item-level rows to the app's menu entities. This is the path that needs zero
+approvals and works for every platform (it's Grubhub's ONLY path).
+
+### Verified format reality (2026-07, official help centers)
+- **Exact column schemas are NOT publicly documented** for any platform; they vary by
+  region and change without notice. Confirmed report surfaces:
+  - **Uber Eats Manager**: "Payment Details" (≤31 days/request) and **"Payment Details
+    (Item Level)"** (≤15 days/request) — CSV download per store + date range.
+  - **DoorDash Merchant Portal**: financial/order export by payout date or date range,
+    optional recurring weekly/monthly email delivery.
+  - **Grubhub for Restaurants**: Financials → Transactions CSV + per-pay-period
+    financial statements (orders, refunds, promotions, adjustments sections).
+- **Design consequence: never hardcode column positions.** Everything is header-driven
+  with per-platform alias tables, plus an interactive column-mapping fallback when
+  detection fails. Golden-file fixtures come from the owner's real exports.
+
+### Where "the menu" lives today (code facts, not assumptions)
+- `days[date].categories` = `{ itemName: revenue }` — the ONLY item-level sales store.
+  [menuAggregation.js](src/utils/menuAggregation.js) rolls it up by **exact trimmed
+  name**; MenuAnalytics, per-item costs (`menu-item-costs`, keyed by name), and the
+  engineering matrix all hang off those names.
+- Recipes ([useRecipeStore.js](src/hooks/useRecipeStore.js)) are keyed by menu-item
+  `name` too. So **name matching IS the menu connection** — one wrong name and the item
+  forks into a duplicate row in analytics and misses its recipe.
+- `categories` stores revenue only, no unit counts. CSVs have quantities — needed for
+  Roadmap #9 (theoretical vs actual variance = recipe plate cost × units sold).
+
+### Architecture — `src/utils/csvIngest/` (pure module, no DOM, no backend required)
+
+```
+file → decode (UTF-8 BOM strip) → detectDialect(headers, filename)
+     → mapColumns (alias table | user mapping UI)
+     → coerce rows (money/date/qty) → validate (totals reconcile)
+     → matchMenuItems (ladder below) → PREVIEW → commit as day patches
+```
+
+- **Dialect registry**: one descriptor per platform export type
+  (`grubhub-transactions`, `ubereats-item-level`, `doordash-orders`, `generic`).
+  Descriptor = header aliases per logical field (`date, orderId, itemName, qty,
+  itemPrice, itemTotal, orderTotal, fees, status`), money rules (`$`, commas,
+  `(1.23)` negatives), explicit date-format list (**never** bare `new Date()` on
+  strings — business date is the platform's local date, no TZ round-trip), and row
+  filters (drop summary/section rows, cancelled + refunded orders configurable).
+  `detect()` scores headers against aliases; ties or low confidence → mapping UI.
+- **Runs client-side today** — `xlsx` (already shipped) parses CSV; the module is pure
+  JS so it lifts into a Supabase Edge Function unchanged when Backend Phase 2 lands
+  (only needed then for cross-device alias sync, not for parsing).
+- **Accuracy gate**: file-level reconciliation — Σ(item totals) vs report's own order
+  totals; >1% drift blocks commit and shows which rows disagree. Preview always shows
+  "CSV total $X → will import $Y" before anything is written.
+- **Idempotency**: new `csv-import-log` namespace stores seen `platform:orderId` keys
+  per day, so overlapping date-range re-exports can't double-count (same guard idea as
+  inventory's `sourceGroupId`).
+- **PII**: platform CSVs carry customer names/addresses — dropped at coerce stage,
+  never persisted.
+
+### Menu connection — the matching ladder
+1. **Canonicalize** raw item name: trim, collapse whitespace, casefold, strip platform
+   decorations (size/modifier suffixes like "(Large)", "- No Onions", combo separators).
+2. **Exact match** against existing names (union of `categories` names across
+   days/months + recipe names + `menu-item-costs` keys).
+3. **Alias map**: new `menu-aliases` store — `{ '<platform>:<rawName>': canonicalName }`
+   via `useLocalStore` (v1, syncs later through the backend blob contract). Hits apply
+   silently on every future import — a mapping is confirmed once, ever.
+4. **Fuzzy suggest** (no auto-apply): token-set similarity ≥ threshold proposes a match
+   in the preview ("Chkn Parm Sandwich → Chicken Parmesan?"); user confirm writes the
+   alias. Below threshold → imported verbatim as a **new** menu item, badged in preview.
+5. **Commit**: per day, merge `{ categories: { name: +revenue }, itemUnits: { name: +qty } }`
+   into the day record. `itemUnits` is a NEW optional field (additive — no store version
+   bump; aggregators treat missing as unknown, not 0). Records tagged
+   `source: 'imported'`, `connector: '<platform>-csv'`.
+
+### Preview/commit UI
+Reuses the scanner results pattern (grouped, editable, confirm-before-commit): sections
+for **matched / suggested / new / dropped rows**, per-day revenue deltas vs existing
+records, and the reconciliation banner. Lives in the Sheets tab next to Excel import.
+i18n ≈ 15 keys × 3 locales.
+
+### Phasing (each independently shippable)
+1. **D1 — parser core + Grubhub transactions** (~2 days): dialect registry, coercion,
+   reconciliation, day-level revenue only (no item matching yet). Grubhub first because
+   CSV is its only possible path.
+2. **D2 — Uber Eats item-level + DoorDash orders** (~1–2 days): two more descriptors;
+   document the Uber 15-day item-level cap in the UI (suggest chunked exports).
+3. **D3 — matching ladder + alias store + preview UI** (~2–3 days): the menu
+   connection proper; `menu-aliases` + `itemUnits` land here.
+4. **D4 — recipe variance hookup** (Roadmap #9, ~1–2 days): theoretical food cost =
+   Σ(recipe plate cost × `itemUnits`) vs actual `foodCostByMonth`; needs D3's units.
+
+### Risks
+- **Schema drift** is certain (undocumented, region-varying) — mitigations: alias
+  tables not positions, mapping-UI fallback, golden-file fixtures per platform checked
+  into `src/utils/csvIngest/__fixtures__/` (anonymized), loud detect-failure instead of
+  silent misparse.
+- **Name explosion** if canonicalization is too weak (every modifier combo becomes an
+  item) or too strong (distinct items merge). Start conservative (strip only bracketed
+  suffixes), let the alias map absorb the rest — aliases are user-confirmed truth.
+- **Locale number formats** (EU-style `1.234,56`) — descriptors carry the money parser;
+  generic fallback asks in the mapping UI rather than guessing.
