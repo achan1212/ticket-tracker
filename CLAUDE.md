@@ -288,3 +288,89 @@ OCR step and the regex parsing, which is where most Scanner bugs live. Verified 
   or Dropbox / local-file (replacing Drive) without touching any store.
 - Cheaper alternatives considered and rejected for now: Cloudflare D1 (must hand-roll auth + email),
   Firebase (NoSQL remodel, lock-in), PocketBase on a VPS (~$4/mo, you babysit a server).
+
+---
+
+## Third-Party API Integration Plan (2026-07-04) — NOT STARTED
+
+Auto-import sales data from delivery platforms and POS systems, replacing manual entry /
+scanner OCR as the primary data path. **Depends on Backend Plan Phase 2** (Supabase auth +
+Edge Functions) — same key-custody argument as the image-analysis plan: platform OAuth
+client secrets and API keys are SECRET and must never ship in the SPA, and none of these
+APIs serve CORS to browsers. Every connector runs server-side in an Edge Function.
+
+### Access reality check (verified 2026-07 from official portals)
+
+| Provider | Self-serve for one restaurant? | Notes |
+|---|---|---|
+| **Square POS** ✅ | Yes, free | Open developer platform, unlimited free sandbox, Orders/Payments APIs; personal access token for own merchant account. Easiest first connector. |
+| **Clover POS** ✅ | Yes, free | Self-serve dev account, sandbox + production, OAuth REST API for own-merchant orders/payments. |
+| **Toast POS** ⚠️ | Yes, with caveats | "Standard API access" = self-serve **read-only** credentials for your own location, but requires an active Toast RMS Essentials+ subscription. Write/multi-merchant needs the vetted partner program. |
+| **DoorDash** ⚠️ | Request form, approval-gated | Reporting API (Financials/Operations/Menu reports) is open to individual merchant developers via a signup form; access team reviews; free once approved; US/CA/AU. The full Marketplace API is partner-only (quarterly backlog review). |
+| **Uber Eats** ⚠️ | Portal exists, agreement needed | Developer portal + OAuth 2.0 client credentials; Reporting API requires "an aligned business agreement with Uber" (enterprise-oriented, 2–4 week integration). Uncertain for a single restaurant — apply and see. |
+| **Grubhub** ❌ | No | No public API. Partner program is for POS vendors / ordering providers only. Fallback: merchant-portal CSV/statement download → file import (reuse sheetIO pipeline). |
+| Aggregators (KitchenHub, Chowly, Otter, Cuboh, Deliverect) ❌ | Paid, custom pricing | One API for all platforms, but violates the $0 constraint and targets order management, not reporting. Rejected for now; revisit if the app ever goes multi-tenant commercial. |
+
+### Architecture — connector layer
+
+```
+Platform / POS APIs  ──►  Supabase Edge Function (per-provider connector)
+     (secret creds)          │  OAuth handshake + token refresh + normalize
+                             ▼
+                   normalized dayRecord patches
+                             │  { date, deliveryRevenue, pickupRevenue,
+                             │    platforms: { doordash, ubereats, grubhub },
+                             ▼    source: 'api', connector: 'square' | ... }
+                     client merges via upsertDay
+```
+
+- **Connector contract** (mirrors the sync-adapter pattern): `connect()` (OAuth flow),
+  `fetchRange(from, to) → dayRecord[]`, `disconnect()`. One Edge Function per provider.
+- **Token custody**: provider refresh tokens stored in a Supabase `connector_tokens`
+  table (`user_id, provider, tokens jsonb, updated_at`), RLS `auth.uid() = user_id`,
+  encrypted at rest. The SPA never sees provider tokens — only its own Supabase JWT.
+- **Merge policy**: API data lands as `source: 'api'` (new value alongside
+  `manual`/`imported`/`demo`) with a per-record `connector` tag. Manual edits win: if a
+  day already has `source: 'manual'`, the connector never overwrites it silently — the
+  UI shows a conflict badge and the user picks. Deterministic upsert keys (the date)
+  make re-syncs idempotent, same as demo data.
+- **Offline-first preserved**: connectors are an enhancement, never a dependency.
+  Signed-out / unapproved / rate-limited users keep today's manual + Excel + scanner
+  paths byte-for-byte. Sync is pull-on-demand ("Sync now" button + optional daily pull),
+  not a live stream.
+
+### Phased rollout (order = least-gated first, each phase independently shippable)
+
+1. **Phase A — Square connector** (~2–3 days once Backend Phase 2 exists). Self-serve,
+   free, sandboxed, best docs. Proves the whole chain: OAuth in Edge Function, token
+   table, normalize Orders → dayRecord (pickup/in-store revenue), conflict badges,
+   Connections UI (new section in Sheets tab or Settings). Get this fully working
+   before touching any gated provider.
+2. **Phase B — DoorDash Reporting API** (~2 days + approval wait). Owner submits the
+   merchant-developer request form (free). Connector maps Financials reports →
+   `platforms.doordash` daily revenue. Build only after approval email lands.
+3. **Phase C — Uber Eats Reporting** (timeline unknown — agreement-gated). Apply via
+   developer portal; if a business agreement is offered, map transaction reports →
+   `platforms.ubereats`. If stalled, fall back to Phase D for Uber too.
+4. **Phase D — CSV statement importers (no API, works today)**. Grubhub (and any stalled
+   platform) via merchant-portal CSV export → extend `importFromXlsx` with per-platform
+   column mappings. Zero approval, zero backend — can even ship BEFORE Phase A as a
+   quick win. Tag records `source: 'imported'`, `connector: 'grubhub-csv'`.
+5. **Phase E — Toast/Clover POS connectors (on demand)**. Only if the restaurant
+   actually runs Toast or Clover; same connector contract as Square. Toast needs the
+   RMS subscription box ticked; Clover is self-serve.
+
+### Risks / notes
+- **Approval risk is the schedule risk**: DoorDash review and Uber agreement timelines
+  are outside our control. That's why Square (ungated) proves the architecture and
+  Phase D (CSV) guarantees every platform has *a* path regardless of approvals.
+- **API terms drift**: delivery platforms revise access programs without notice (same
+  lesson as Gemini free-tier limits). The Edge Function boundary means a provider change
+  never touches the client; worst case a connector degrades to the CSV path.
+- **Rate limits**: reporting endpoints are low-volume (one restaurant, daily pulls) —
+  orders of magnitude below any published cap. Still: exponential backoff + surface
+  `tt:storage-error`-style toast on repeated failure.
+- **New i18n surface**: Connections UI ≈ 15–20 keys × 3 locales (connect/disconnect,
+  sync status, conflict dialog, per-provider names stay untranslated).
+- **`source` enum widens** to `'manual' | 'imported' | 'demo' | 'api'` — audit every
+  switch on `source` (badges, importer, demo replace logic) when Phase A lands.
