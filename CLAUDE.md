@@ -288,3 +288,194 @@ OCR step and the regex parsing, which is where most Scanner bugs live. Verified 
   or Dropbox / local-file (replacing Drive) without touching any store.
 - Cheaper alternatives considered and rejected for now: Cloudflare D1 (must hand-roll auth + email),
   Firebase (NoSQL remodel, lock-in), PocketBase on a VPS (~$4/mo, you babysit a server).
+
+---
+
+## Third-Party API Integration Plan (2026-07-04) — NOT STARTED
+
+Auto-import sales data from delivery platforms and POS systems, replacing manual entry /
+scanner OCR as the primary data path. **Depends on Backend Plan Phase 2** (Supabase auth +
+Edge Functions) — same key-custody argument as the image-analysis plan: platform OAuth
+client secrets and API keys are SECRET and must never ship in the SPA, and none of these
+APIs serve CORS to browsers. Every connector runs server-side in an Edge Function.
+
+### Access reality check (verified 2026-07 from official portals)
+
+| Provider | Self-serve for one restaurant? | Notes |
+|---|---|---|
+| **Square POS** ✅ | Yes, free | Open developer platform, unlimited free sandbox, Orders/Payments APIs; personal access token for own merchant account. Easiest first connector. |
+| **Clover POS** ✅ | Yes, free | Self-serve dev account, sandbox + production, OAuth REST API for own-merchant orders/payments. |
+| **Toast POS** ⚠️ | Yes, with caveats | "Standard API access" = self-serve **read-only** credentials for your own location, but requires an active Toast RMS Essentials+ subscription. Write/multi-merchant needs the vetted partner program. |
+| **DoorDash** ⚠️ | Request form, approval-gated | Reporting API (Financials/Operations/Menu reports) is open to individual merchant developers via a signup form; access team reviews; free once approved; US/CA/AU. The full Marketplace API is partner-only (quarterly backlog review). |
+| **Uber Eats** ⚠️ | Portal exists, agreement needed | Developer portal + OAuth 2.0 client credentials; Reporting API requires "an aligned business agreement with Uber" (enterprise-oriented, 2–4 week integration). Uncertain for a single restaurant — apply and see. |
+| **Grubhub** ❌ | No | No public API. Partner program is for POS vendors / ordering providers only. Fallback: merchant-portal CSV/statement download → file import (reuse sheetIO pipeline). |
+| Aggregators (KitchenHub, Chowly, Otter, Cuboh, Deliverect) ❌ | Paid, custom pricing | One API for all platforms, but violates the $0 constraint and targets order management, not reporting. Rejected for now; revisit if the app ever goes multi-tenant commercial. |
+
+### Architecture — connector layer
+
+```
+Platform / POS APIs  ──►  Supabase Edge Function (per-provider connector)
+     (secret creds)          │  OAuth handshake + token refresh + normalize
+                             ▼
+                   normalized dayRecord patches
+                             │  { date, deliveryRevenue, pickupRevenue,
+                             │    platforms: { doordash, ubereats, grubhub },
+                             ▼    source: 'api', connector: 'square' | ... }
+                     client merges via upsertDay
+```
+
+- **Connector contract** (mirrors the sync-adapter pattern): `connect()` (OAuth flow),
+  `fetchRange(from, to) → dayRecord[]`, `disconnect()`. One Edge Function per provider.
+- **Token custody**: provider refresh tokens stored in a Supabase `connector_tokens`
+  table (`user_id, provider, tokens jsonb, updated_at`), RLS `auth.uid() = user_id`,
+  encrypted at rest. The SPA never sees provider tokens — only its own Supabase JWT.
+- **Merge policy**: API data lands as `source: 'api'` (new value alongside
+  `manual`/`imported`/`demo`) with a per-record `connector` tag. Manual edits win: if a
+  day already has `source: 'manual'`, the connector never overwrites it silently — the
+  UI shows a conflict badge and the user picks. Deterministic upsert keys (the date)
+  make re-syncs idempotent, same as demo data.
+- **Offline-first preserved**: connectors are an enhancement, never a dependency.
+  Signed-out / unapproved / rate-limited users keep today's manual + Excel + scanner
+  paths byte-for-byte. Sync is pull-on-demand ("Sync now" button + optional daily pull),
+  not a live stream.
+
+### Phased rollout (order = least-gated first, each phase independently shippable)
+
+1. **Phase A — Square connector** (~2–3 days once Backend Phase 2 exists). Self-serve,
+   free, sandboxed, best docs. Proves the whole chain: OAuth in Edge Function, token
+   table, normalize Orders → dayRecord (pickup/in-store revenue), conflict badges,
+   Connections UI (new section in Sheets tab or Settings). Get this fully working
+   before touching any gated provider.
+2. **Phase B — DoorDash Reporting API** (~2 days + approval wait). Owner submits the
+   merchant-developer request form (free). Connector maps Financials reports →
+   `platforms.doordash` daily revenue. Build only after approval email lands.
+3. **Phase C — Uber Eats Reporting** (timeline unknown — agreement-gated). Apply via
+   developer portal; if a business agreement is offered, map transaction reports →
+   `platforms.ubereats`. If stalled, fall back to Phase D for Uber too.
+4. **Phase D — CSV statement importers (no API, works today)**. Grubhub (and any stalled
+   platform) via merchant-portal CSV export → extend `importFromXlsx` with per-platform
+   column mappings. Zero approval, zero backend — can even ship BEFORE Phase A as a
+   quick win. Tag records `source: 'imported'`, `connector: 'grubhub-csv'`.
+5. **Phase E — Toast/Clover POS connectors (on demand)**. Only if the restaurant
+   actually runs Toast or Clover; same connector contract as Square. Toast needs the
+   RMS subscription box ticked; Clover is self-serve.
+
+### Risks / notes
+- **Approval risk is the schedule risk**: DoorDash review and Uber agreement timelines
+  are outside our control. That's why Square (ungated) proves the architecture and
+  Phase D (CSV) guarantees every platform has *a* path regardless of approvals.
+- **API terms drift**: delivery platforms revise access programs without notice (same
+  lesson as Gemini free-tier limits). The Edge Function boundary means a provider change
+  never touches the client; worst case a connector degrades to the CSV path.
+- **Rate limits**: reporting endpoints are low-volume (one restaurant, daily pulls) —
+  orders of magnitude below any published cap. Still: exponential backoff + surface
+  `tt:storage-error`-style toast on repeated failure.
+- **New i18n surface**: Connections UI ≈ 15–20 keys × 3 locales (connect/disconnect,
+  sync status, conflict dialog, per-provider names stay untranslated).
+- **`source` enum widens** to `'manual' | 'imported' | 'demo' | 'api'` — audit every
+  switch on `source` (badges, importer, demo replace logic) when Phase A lands.
+
+---
+
+## CSV → Menu Ingestion Plan (2026-07-04) — NOT STARTED
+
+Detailed design for Phase D of the API plan: read platform CSV exports **accurately** and
+connect item-level rows to the app's menu entities. This is the path that needs zero
+approvals and works for every platform (it's Grubhub's ONLY path).
+
+### Verified format reality (2026-07, official help centers)
+- **Exact column schemas are NOT publicly documented** for any platform; they vary by
+  region and change without notice. Confirmed report surfaces:
+  - **Uber Eats Manager**: "Payment Details" (≤31 days/request) and **"Payment Details
+    (Item Level)"** (≤15 days/request) — CSV download per store + date range.
+  - **DoorDash Merchant Portal**: financial/order export by payout date or date range,
+    optional recurring weekly/monthly email delivery.
+  - **Grubhub for Restaurants**: Financials → Transactions CSV + per-pay-period
+    financial statements (orders, refunds, promotions, adjustments sections).
+- **Design consequence: never hardcode column positions.** Everything is header-driven
+  with per-platform alias tables, plus an interactive column-mapping fallback when
+  detection fails. Golden-file fixtures come from the owner's real exports.
+
+### Where "the menu" lives today (code facts, not assumptions)
+- `days[date].categories` = `{ itemName: revenue }` — the ONLY item-level sales store.
+  [menuAggregation.js](src/utils/menuAggregation.js) rolls it up by **exact trimmed
+  name**; MenuAnalytics, per-item costs (`menu-item-costs`, keyed by name), and the
+  engineering matrix all hang off those names.
+- Recipes ([useRecipeStore.js](src/hooks/useRecipeStore.js)) are keyed by menu-item
+  `name` too. So **name matching IS the menu connection** — one wrong name and the item
+  forks into a duplicate row in analytics and misses its recipe.
+- `categories` stores revenue only, no unit counts. CSVs have quantities — needed for
+  Roadmap #9 (theoretical vs actual variance = recipe plate cost × units sold).
+
+### Architecture — `src/utils/csvIngest/` (pure module, no DOM, no backend required)
+
+```
+file → decode (UTF-8 BOM strip) → detectDialect(headers, filename)
+     → mapColumns (alias table | user mapping UI)
+     → coerce rows (money/date/qty) → validate (totals reconcile)
+     → matchMenuItems (ladder below) → PREVIEW → commit as day patches
+```
+
+- **Dialect registry**: one descriptor per platform export type
+  (`grubhub-transactions`, `ubereats-item-level`, `doordash-orders`, `generic`).
+  Descriptor = header aliases per logical field (`date, orderId, itemName, qty,
+  itemPrice, itemTotal, orderTotal, fees, status`), money rules (`$`, commas,
+  `(1.23)` negatives), explicit date-format list (**never** bare `new Date()` on
+  strings — business date is the platform's local date, no TZ round-trip), and row
+  filters (drop summary/section rows, cancelled + refunded orders configurable).
+  `detect()` scores headers against aliases; ties or low confidence → mapping UI.
+- **Runs client-side today** — `xlsx` (already shipped) parses CSV; the module is pure
+  JS so it lifts into a Supabase Edge Function unchanged when Backend Phase 2 lands
+  (only needed then for cross-device alias sync, not for parsing).
+- **Accuracy gate**: file-level reconciliation — Σ(item totals) vs report's own order
+  totals; >1% drift blocks commit and shows which rows disagree. Preview always shows
+  "CSV total $X → will import $Y" before anything is written.
+- **Idempotency**: new `csv-import-log` namespace stores seen `platform:orderId` keys
+  per day, so overlapping date-range re-exports can't double-count (same guard idea as
+  inventory's `sourceGroupId`).
+- **PII**: platform CSVs carry customer names/addresses — dropped at coerce stage,
+  never persisted.
+
+### Menu connection — the matching ladder
+1. **Canonicalize** raw item name: trim, collapse whitespace, casefold, strip platform
+   decorations (size/modifier suffixes like "(Large)", "- No Onions", combo separators).
+2. **Exact match** against existing names (union of `categories` names across
+   days/months + recipe names + `menu-item-costs` keys).
+3. **Alias map**: new `menu-aliases` store — `{ '<platform>:<rawName>': canonicalName }`
+   via `useLocalStore` (v1, syncs later through the backend blob contract). Hits apply
+   silently on every future import — a mapping is confirmed once, ever.
+4. **Fuzzy suggest** (no auto-apply): token-set similarity ≥ threshold proposes a match
+   in the preview ("Chkn Parm Sandwich → Chicken Parmesan?"); user confirm writes the
+   alias. Below threshold → imported verbatim as a **new** menu item, badged in preview.
+5. **Commit**: per day, merge `{ categories: { name: +revenue }, itemUnits: { name: +qty } }`
+   into the day record. `itemUnits` is a NEW optional field (additive — no store version
+   bump; aggregators treat missing as unknown, not 0). Records tagged
+   `source: 'imported'`, `connector: '<platform>-csv'`.
+
+### Preview/commit UI
+Reuses the scanner results pattern (grouped, editable, confirm-before-commit): sections
+for **matched / suggested / new / dropped rows**, per-day revenue deltas vs existing
+records, and the reconciliation banner. Lives in the Sheets tab next to Excel import.
+i18n ≈ 15 keys × 3 locales.
+
+### Phasing (each independently shippable)
+1. **D1 — parser core + Grubhub transactions** (~2 days): dialect registry, coercion,
+   reconciliation, day-level revenue only (no item matching yet). Grubhub first because
+   CSV is its only possible path.
+2. **D2 — Uber Eats item-level + DoorDash orders** (~1–2 days): two more descriptors;
+   document the Uber 15-day item-level cap in the UI (suggest chunked exports).
+3. **D3 — matching ladder + alias store + preview UI** (~2–3 days): the menu
+   connection proper; `menu-aliases` + `itemUnits` land here.
+4. **D4 — recipe variance hookup** (Roadmap #9, ~1–2 days): theoretical food cost =
+   Σ(recipe plate cost × `itemUnits`) vs actual `foodCostByMonth`; needs D3's units.
+
+### Risks
+- **Schema drift** is certain (undocumented, region-varying) — mitigations: alias
+  tables not positions, mapping-UI fallback, golden-file fixtures per platform checked
+  into `src/utils/csvIngest/__fixtures__/` (anonymized), loud detect-failure instead of
+  silent misparse.
+- **Name explosion** if canonicalization is too weak (every modifier combo becomes an
+  item) or too strong (distinct items merge). Start conservative (strip only bracketed
+  suffixes), let the alias map absorb the rest — aliases are user-confirmed truth.
+- **Locale number formats** (EU-style `1.234,56`) — descriptors carry the money parser;
+  generic fallback asks in the mapping UI rather than guessing.
