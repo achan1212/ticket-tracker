@@ -583,3 +583,130 @@ i18n ≈ 15 keys × 3 locales.
   suffixes), let the alias map absorb the rest — aliases are user-confirmed truth.
 - **Locale number formats** (EU-style `1.234,56`) — descriptors carry the money parser;
   generic fallback asks in the mapping UI rather than guessing.
+
+---
+
+## Mobile App Plan (2026-07-05) — NOT STARTED
+
+Android + iOS versions of the dashboard. **Strategy: one codebase, three targets** —
+the existing Vite SPA stays the single source of truth; mobile ships first as a PWA,
+then as store apps via a Capacitor WebView shell around the same `dist/`.
+
+### Why Capacitor, not React Native (decided)
+The app's core libs are DOM/browser tech: recharts (SVG DOM), xlsx (Blob/File APIs),
+tesseract.js (WASM in a worker), react-router-dom, CSS-variable theming. A React
+Native rewrite replaces ALL of them (victory-native, native fs, native OCR) — months
+of work and a permanent second codebase, for zero feature gain in an offline
+single-user tool. Capacitor wraps the built SPA in a native WebView with plugin
+bridges, reusing ~95% of the code. Tauri Mobile rejected as less mature; PWA alone
+rejected because iOS storage eviction (below) is fatal for a data-ownership app.
+
+### Verified facts (2026-07)
+- **Capacitor 8** is current (`@capacitor/core` 8.4.1 on npm). Vite works with plain
+  config: `webDir: 'dist'`, `npx cap sync` after every build. iOS builds need a Mac
+  with Xcode; Android needs Android Studio / SDK (API 21+ floor).
+- **Costs** (this ends the app's "$0" line — owner decision gate): Google Play
+  **$25 one-time**; Apple Developer Program **$99/year**.
+- **Google Play personal accounts** (created after 2023-11-13) must run a closed test
+  with **≥12 opted-in testers for 14 consecutive days** before production access.
+  Testers must actually use the app; dropping below 12 can reset the clock.
+- **iOS PWA reality**: push works on iOS 16.4+ but ONLY for home-screen-installed
+  apps; installs are manual (no install prompt API); Safari 17+ supports the
+  Persistent Storage API but keeps LRU eviction + a **7-day script-writable-storage
+  cap** for infrequently used sites; **EU (DMA): home-screen PWAs open in Safari
+  tabs** — no standalone mode, no push. PWA is a fine bonus tier, not the product.
+
+### Architecture changes required (shared by all targets)
+1. **Storage adapter under `useLocalStore`** — THE critical change. WKWebView/WebView
+   localStorage is OS-purgeable; a data-ownership app cannot live on it. Introduce a
+   pluggable backend behind the existing hook API: web → localStorage (unchanged);
+   Capacitor → `@capacitor/preferences` (native UserDefaults/SharedPreferences).
+   Preferences is async, localStorage is sync → boot-time hydrate: read all ~10
+   namespaces into memory before first render (splash covers it), writes stay
+   debounced. This is the SAME envelope contract as the Backend Plan's syncEngine —
+   build once, both consume it. One-time migration copies existing localStorage data
+   into native storage on first app launch.
+2. **File I/O adapter for sheetIO** — `<a download>` and drag-drop don't exist in a
+   WebView shell. Export: `@capacitor/filesystem` write + `@capacitor/share` sheet
+   (user picks Files/Drive/email). Import: keep `<input type="file">` (works in both
+   WebViews) with a FilePicker plugin fallback if testing shows gaps.
+3. **Scanner** — tesseract.js WASM runs in modern WebViews; keep it. Add
+   `@capacitor/camera` so "scan a ticket" opens the native camera instead of a file
+   picker. Bundle tesseract worker/wasm/langdata locally (already the pattern —
+   `public/tesseract/`) so OCR stays offline.
+4. **Mobile chrome** — `viewport-fit=cover` + `env(safe-area-inset-*)` padding on
+   header/drawer (notches), `@capacitor/status-bar` matched to `--surface` per theme,
+   Android hardware back button (`@capacitor/app` listener: close drawer/modal first,
+   then navigate back, then background the app), keyboard resize mode, splash screens
+   + icons generated once via `@capacitor/assets`.
+5. **Routing** — react-router works under Capacitor's local origin; verify deep
+   links / cold-start restore land on the last active tab (persist `activeTab` — a
+   preference, survives clear-all like theme/language).
+
+### Phases
+
+**M0 — PWA baseline (~1–2 days, $0, ships value immediately)**
+`vite-plugin-pwa` (manifest, icons, offline service worker precache — the app is
+already offline-first, SW just makes loads instant + installable), iOS meta tags,
+`navigator.storage.persist()` request, install instructions in the Sheets tab
+("Add to Home Screen"), storage-eviction warning banner reusing the `tt:storage-error`
+pattern. Explicitly document: iOS PWA users should Excel-export regularly (eviction
+risk); EU iOS users get a browser tab. i18n ≈ 6 keys × 3.
+
+**M1 — Capacitor shell + Android (~3–5 days)**
+Add `@capacitor/core` + `cli` + `android` (build-time deps; the SPA bundle is
+untouched). Storage adapter + migration (arch item 1 — do this FIRST), file I/O
+adapter (item 2), mobile chrome (item 4). Test matrix: Pixel emulator + one real
+low-end device; verify OCR speed, xlsx round-trip, 90-day demo dataset perf in
+WebView. Output: signed AAB via keystore (keystore backed up — losing it loses the
+listing).
+
+**M2 — Google Play release (calendar time: ≥14 days of closed testing)**
+Play Console ($25), data-safety form (truthful: all data on-device, no collection —
+a selling point), listing assets, closed test with 12+ testers (restaurant staff +
+friends; the 14-day clock is the schedule risk, start recruiting during M1),
+production rollout.
+
+**M3 — iOS app (~2–4 days, needs a Mac + $99/yr)**
+`@capacitor/ios`, Xcode signing, safe-area + status-bar polish (item 4 is mostly
+shared; iOS-specific QA here), WKWebView quirks pass (rubber-band scroll off on
+chrome, file input behavior, WASM perf), TestFlight (up to 100 external testers,
+no 12-tester rule), App Store review. **Guideline 4.2 (minimal functionality) risk**:
+Apple rejects "repackaged websites" — mitigation is genuine native integration
+(camera scanner, share-sheet export, native storage, offline-complete) + app-quality
+UX (splash, safe areas, no browser chrome feel). Have the M4 items ready before
+submitting if review bounces.
+
+**M4 — native polish (as needed, post-launch)**
+Haptics on destructive confirms, local notifications ("enter today's sales" daily
+reminder — pairs with Tier 3 #5 day notes), app shortcuts/quick actions (New Entry,
+Scanner), share-target (receive photos into Scanner from the OS share sheet).
+
+**M5 — CI/CD + release discipline (~1–2 days)**
+GitHub Actions: web build + `cap sync` + Android AAB on tag; macOS runner (or local
+Mac) for iOS archive; fastlane optional later. Version scheme: single semver across
+web/Android/iOS; store releases cut from tagged web builds so the three targets never
+drift.
+
+**M6 — multi-device sync (depends on Backend Plan Phase 2)**
+Phone + laptop editing the same data makes sync real: the storage adapter's envelope
+feeds the planned syncEngine/Supabase replica unchanged. Until then the Excel
+round-trip is the documented transfer path (works in-app via share sheet from M1).
+
+### Order & gates
+M0 now (no cost, no accounts) → owner decision gate ($25 + $99/yr + Mac access) →
+M1→M2 (Android first: cheaper, no Mac, tester clock is the long pole) → M3 → M4/M5
+as needed → M6 after backend lands.
+
+### Risks
+- **Storage eviction** is the #1 correctness risk on every target — the adapter (M1)
+  is the real fix; M0 mitigates with persist() + export nagging.
+- **12-tester/14-day rule** is the Android schedule long pole — recruit early; an
+  organization Play account ($25, needs a D-U-N-S number) bypasses it if ever needed.
+- **Apple 4.2 rejection** — mitigated by native camera/share/storage integration;
+  worst case, ship M4 items before resubmission.
+- **Two native shells to maintain** — Capacitor major bumps ~yearly; pin versions,
+  upgrade deliberately, keep ALL app logic in the web layer so shells stay thin.
+- **WebView fragmentation on old Android** — API 21 floor is ancient; set
+  `minSdkVersion` to a modern floor (e.g. 26+) and test the WASM/OCR path on the
+  oldest supported device.
