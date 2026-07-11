@@ -120,6 +120,48 @@ Reference for future planning; don't re-implement.
 6. WoW / MoM / YoY comparison overlays on Dashboard
 7. Profit & Loss view
 
+### Tier 3 roadmap (researched 2026-07) — NOT STARTED
+Feature gaps identified by comparing against commercial back-office tools (MarginEdge,
+Restaurant365, MarketMan, Tenzo) and industry KPI guidance, filtered through the app's
+constraints (offline-first, $0, single restaurant). Ranked by value ÷ effort. Earlier
+numbered items #9–#14 fold in below where they overlap.
+
+1. **Prime Cost card + trend** (~1 day, zero new data entry). Food + labor as one % of
+   revenue — THE industry metric (target band 55–65%). All inputs already exist
+   (`foodCostByMonth`, `laborByMonth`, revenue); the app just never combines them.
+   Dashboard + P&L card with the target band. Monthly first; daily needs item 7.
+2. **Break-even line** (~1 day, purely derived). Monthly revenue floor =
+   fixed costs ÷ (1 − variable-cost %). Fixed-cost actuals + food-cost % already
+   stored. Show "break even at $X — currently $Y" on P&L; pace line on Dashboard.
+3. **True delivery-channel profitability** (the biggest blind spot). Effective
+   third-party cost is 30–45% of order value (commissions + promos + refunds +
+   packaging) vs the 15–30% headline rate; the app tracks platform *revenue* but not
+   platform *costs*. Per-platform commission % + promo/refund/packaging entries →
+   true net per channel + direct-vs-delivery margin comparison. Extends the existing
+   deliveryRates / Delivery Fees surface.
+4. **Simple sales forecasting** (offline-friendly). Trailing 4-week same-weekday
+   average + trend adjustment — no AI, no weather API. Feeds prep planning; pairs
+   with #2 ("Thursday pacing $180 below break-even").
+5. **Daily manager log / day notes** (quick win). Free-text + tags on the day record
+   (weather, local event, 86'd items, short-staffed) — the "why was Tuesday weird?"
+   answer that makes WoW/MoM/YoY overlays interpretable later.
+6. **Vendor price-watch** (absorbs old #10 Vendor Directory). MarginEdge's flagship:
+   flag when an ingredient's invoice price jumps. Food-cost imports already carry
+   supplier + SKU + unit cost — derive "price changes since last import" per catalog
+   item, no new data entry.
+7. **Daily labor entry** (absorbs old #12 Labor %). Labor is monthly-only today,
+   which blocks daily prime cost. Optional per-day labor $ field (or simple shift
+   log) on the day record; monthly actuals stay the source of truth for P&L.
+8. **Waste log view** (absorbs old #11). Inventory already stores `type: 'waste'`
+   movements — needs a dedicated view + waste-as-%-of-food-cost rollup, not a new store.
+9. **Theoretical vs actual variance** (old #9) — already planned as CSV plan Phase D4
+   (needs `itemUnits`).
+10. **Sales tax summary** (old #14) and **cash reconciliation** (old #13) —
+    accounting basics; lower priority until asked for.
+
+Recommended batches: (1+2) as one "Financial Health" PR — all derived data;
+then 3; then 5 as a quick win.
+
 ### Sheets export — round-trip contract
 [src/utils/sheetIO.js](src/utils/sheetIO.js). `exportToXlsx({ dailySummary, deliveryRates, months, foodCostByDay, foodCostByMonth, foodCostGroups, plTargets })` writes up to 5 sheets: Daily Summary, Monthly Summary, Delivery Fees, Food Cost Detail, P&L Targets. The importer (`importFromXlsx`) only reads Daily/Monthly Summary sheets and preserves `totalRevenue` override + monthly `foodCost` field for round-tripping.
 
