@@ -393,6 +393,38 @@ OCR step and the regex parsing, which is where most Scanner bugs live. Verified 
 - Cheaper alternatives considered and rejected for now: Cloudflare D1 (must hand-roll auth + email),
   Firebase (NoSQL remodel, lock-in), PocketBase on a VPS (~$4/mo, you babysit a server).
 
+### iOS app compatibility (added 2026-07-11, verified)
+The backend plan works inside the Capacitor iOS app (Mobile Plan I7 wires them
+together). Compatibility matrix + the two required adjustments:
+
+| Piece | iOS status |
+|---|---|
+| syncEngine + envelope contract | Works as-is — same contract as the I1 storage adapter; building one builds the other |
+| Supabase REST / RLS / Edge Functions | Works as-is (plain HTTPS fetch from WKWebView) |
+| Supabase auth | Works — use **email OTP, not magic links** (below) |
+| Google Drive adapter | Needs **system-browser PKCE** flow — WebView OAuth is hard-blocked |
+| Offline-first fallback | Works as-is; flush on app-pause, not beforeunload |
+
+- **Auth adjustment**: magic links require Universal Links + redirect config to get
+  back into the app; Supabase's **email OTP** variant (type a 6-digit code) is the
+  same passwordless flow with zero deep-link machinery — use it on iOS (web can keep
+  magic links). supabase-js persists its session in localStorage by default — MUST be
+  configured with a custom storage handler backed by the I1 native storage adapter,
+  or sessions live in exactly the purgeable storage the adapter exists to avoid.
+  Email OTP is first-party auth, so Apple Guideline 4.8 (Sign in with Apple
+  requirement) is NOT triggered — it only applies to third-party/social login.
+- **Drive adjustment**: Google blocks OAuth in embedded WebViews (Sept 2021,
+  `disallowed_useragent`; RFC 8252 mandates external user-agents). The GIS in-page
+  token flow works on web but hard-fails in Capacitor. Fix: launch consent in
+  **ASWebAuthenticationSession** (system browser sheet) with PKCE authorization-code
+  flow + custom-scheme redirect. The `drive.file` scope decision is unaffected.
+  Note: iOS users need Drive less — the I1 share-sheet export already writes to
+  iCloud Drive/Files natively (user-owned backup, zero OAuth).
+- **Sync timing on iOS**: foreground-only (iOS suspends WebView apps; no background
+  sync) — matches the pull-on-launch / debounced-push design. Flush pending writes on
+  `appStateChange` pause (via `@capacitor/app`); `beforeunload` is unreliable in
+  WKWebView.
+
 ---
 
 ## Third-Party API Integration Plan (2026-07-04) — NOT STARTED
