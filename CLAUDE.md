@@ -586,11 +586,20 @@ i18n ≈ 15 keys × 3 locales.
 
 ---
 
-## Mobile App Plan (2026-07-05) — NOT STARTED
+## Mobile App Plan (2026-07-05, iOS-first revision 2026-07-11) — NOT STARTED
 
 Android + iOS versions of the dashboard. **Strategy: one codebase, three targets** —
-the existing Vite SPA stays the single source of truth; mobile ships first as a PWA,
-then as store apps via a Capacitor WebView shell around the same `dist/`.
+the existing Vite SPA stays the single source of truth; store apps ship via a
+Capacitor WebView shell around the same `dist/`.
+
+**Decided 2026-07-11: iOS ships first.** Owner has a Mac; the offline no-account
+version is the v1 product (favorable for review: no demo credentials needed,
+"Data Not Collected" privacy label, demo-data button shows reviewers a populated
+app). Native camera + share-sheet features move INTO v1 as the Guideline 4.2
+defense — the app must demonstrably not be a repackaged website (it's fully
+bundled, works in airplane mode). Android follows after the iOS release; its
+12-tester/14-day Play clock is then off the critical path. PWA (old M0) becomes
+an optional side quest, not a gate.
 
 ### Why Capacitor, not React Native (decided)
 The app's core libs are DOM/browser tech: recharts (SVG DOM), xlsx (Blob/File APIs),
@@ -643,70 +652,86 @@ rejected because iOS storage eviction (below) is fatal for a data-ownership app.
    links / cold-start restore land on the last active tab (persist `activeTab` — a
    preference, survives clear-all like theme/language).
 
-### Phases
+### Phases (iOS-first)
 
-**M0 — PWA baseline (~1–2 days, $0, ships value immediately)**
-`vite-plugin-pwa` (manifest, icons, offline service worker precache — the app is
-already offline-first, SW just makes loads instant + installable), iOS meta tags,
-`navigator.storage.persist()` request, install instructions in the Sheets tab
-("Add to Home Screen"), storage-eviction warning banner reusing the `tt:storage-error`
-pattern. Explicitly document: iOS PWA users should Excel-export regularly (eviction
-risk); EU iOS users get a browser tab. i18n ≈ 6 keys × 3.
+**I1 — Capacitor shell + shared architecture (~4–6 days, the real build)**
+Add `@capacitor/core` + `cli` + `ios` (build-time deps; the SPA bundle is untouched).
+Work order inside the phase matters:
+1. **Storage adapter + migration FIRST** (arch item 1). Non-negotiable for v1:
+   WKWebView localStorage is OS-purgeable, and UserDefaults (via
+   `@capacitor/preferences`) rides device backups — user data survives phone
+   upgrades/restores for free.
+2. **File I/O adapter** (arch item 2): Excel export through `@capacitor/filesystem`
+   + `@capacitor/share` sheet; verify `<input type="file">` import in WKWebView.
+3. **Native camera for Scanner** (arch item 3) — moved up from old M4: part of the
+   4.2 defense, not post-launch polish.
+4. **Mobile chrome** (arch item 4): safe areas, status bar per theme, splash +
+   icons via `@capacitor/assets`, keyboard resize mode, rubber-band scroll off on
+   app chrome.
+Test on simulator + owner's real iPhone: OCR speed (WASM in WKWebView), xlsx
+round-trip through the share sheet, 90-day demo dataset perf, airplane-mode
+full-feature pass (this is also the 4.2 demo).
 
-**M1 — Capacitor shell + Android (~3–5 days)**
-Add `@capacitor/core` + `cli` + `android` (build-time deps; the SPA bundle is
-untouched). Storage adapter + migration (arch item 1 — do this FIRST), file I/O
-adapter (item 2), mobile chrome (item 4). Test matrix: Pixel emulator + one real
-low-end device; verify OCR speed, xlsx round-trip, 90-day demo dataset perf in
-WebView. Output: signed AAB via keystore (keystore backed up — losing it loses the
-listing).
+**I2 — TestFlight beta (~1 day setup + beta time, $99/yr gate)**
+Apple Developer enrollment, Xcode signing, TestFlight internal → external testers
+(up to 100, no minimum count, no waiting-period rule). Beta focus: data durability
+(kill app, reboot, restore-from-backup), import/export on real devices, light/dark
++ all three locales.
 
-**M2 — Google Play release (calendar time: ≥14 days of closed testing)**
-Play Console ($25), data-safety form (truthful: all data on-device, no collection —
-a selling point), listing assets, closed test with 12+ testers (restaurant staff +
-friends; the 14-day clock is the schedule risk, start recruiting during M1),
-production rollout.
+**I3 — App Store submission (~1–2 days + review time)**
+Listing assets (screenshots per device class, app description honest about
+offline/no-account), privacy label: "Data Not Collected", App Review notes:
+"fully offline, no account needed, tap Load Demo Data to explore; works in
+airplane mode". **Guideline 4.2 defense shipped in I1**: bundled-local (no remote
+URL), native camera scanner, share-sheet export, native storage, offline-complete.
+If 4.2 bounces anyway: respond in Resolution Center, add I5 polish items,
+resubmit — iterative, not account-threatening.
 
-**M3 — iOS app (~2–4 days, needs a Mac + $99/yr)**
-`@capacitor/ios`, Xcode signing, safe-area + status-bar polish (item 4 is mostly
-shared; iOS-specific QA here), WKWebView quirks pass (rubber-band scroll off on
-chrome, file input behavior, WASM perf), TestFlight (up to 100 external testers,
-no 12-tester rule), App Store review. **Guideline 4.2 (minimal functionality) risk**:
-Apple rejects "repackaged websites" — mitigation is genuine native integration
-(camera scanner, share-sheet export, native storage, offline-complete) + app-quality
-UX (splash, safe areas, no browser chrome feel). Have the M4 items ready before
-submitting if review bounces.
+**I4 — Android port (~2–3 days + 14-day tester clock, $25)**
+`@capacitor/android` reuses everything from I1 (adapter, file I/O, camera, chrome —
+all cross-platform plugins). Android-specific: hardware back button
+(`@capacitor/app` listener: drawer/modal → navigate back → background), keystore
+(backed up — losing it loses the listing), `minSdkVersion` 26+, test WASM/OCR on
+one real low-end device. Then Play Console: data-safety form (all on-device),
+closed test ≥12 opted-in testers × 14 consecutive days (recruit during I1–I3 —
+restaurant staff + friends), production rollout.
 
-**M4 — native polish (as needed, post-launch)**
+**I5 — native polish (as needed, post-launch)**
 Haptics on destructive confirms, local notifications ("enter today's sales" daily
 reminder — pairs with Tier 3 #5 day notes), app shortcuts/quick actions (New Entry,
 Scanner), share-target (receive photos into Scanner from the OS share sheet).
+Ready-to-go list if App Store review asks for more.
 
-**M5 — CI/CD + release discipline (~1–2 days)**
-GitHub Actions: web build + `cap sync` + Android AAB on tag; macOS runner (or local
-Mac) for iOS archive; fastlane optional later. Version scheme: single semver across
-web/Android/iOS; store releases cut from tagged web builds so the three targets never
-drift.
+**I6 — CI/CD + release discipline (~1–2 days)**
+GitHub Actions: web build + `cap sync`; iOS archive on the owner's Mac (or macOS
+runner) + Android AAB on tag. Single semver across web/iOS/Android; store releases
+cut from tagged web builds so the three targets never drift.
 
-**M6 — multi-device sync (depends on Backend Plan Phase 2)**
+**I7 — multi-device sync (depends on Backend Plan Phase 2)**
 Phone + laptop editing the same data makes sync real: the storage adapter's envelope
 feeds the planned syncEngine/Supabase replica unchanged. Until then the Excel
-round-trip is the documented transfer path (works in-app via share sheet from M1).
+round-trip via share sheet (I1) is the documented transfer path.
+
+**Optional side quest — PWA baseline (old M0, ~1–2 days, $0, any time)**
+`vite-plugin-pwa` manifest + offline precache + install instructions. Nice for
+Android-web users pre-I4 and desktop-installable. iOS PWA carries the 7-day
+eviction risk + EU Safari-tab limitation — never the product, never a gate.
 
 ### Order & gates
-M0 now (no cost, no accounts) → owner decision gate ($25 + $99/yr + Mac access) →
-M1→M2 (Android first: cheaper, no Mac, tester clock is the long pole) → M3 → M4/M5
-as needed → M6 after backend lands.
+$99/yr Apple enrollment (owner, can start today — approval takes ~1–2 days) →
+I1 → I2 → I3 (iOS live) → I4 ($25, tester recruiting already done during I1–I3)
+→ I5/I6 as needed → I7 after backend lands.
 
 ### Risks
-- **Storage eviction** is the #1 correctness risk on every target — the adapter (M1)
-  is the real fix; M0 mitigates with persist() + export nagging.
-- **12-tester/14-day rule** is the Android schedule long pole — recruit early; an
-  organization Play account ($25, needs a D-U-N-S number) bypasses it if ever needed.
-- **Apple 4.2 rejection** — mitigated by native camera/share/storage integration;
-  worst case, ship M4 items before resubmission.
+- **Storage eviction** is the #1 correctness risk — the I1 adapter is the fix and
+  it ships before anything else; no store build exists without it.
+- **Apple 4.2 rejection** — mitigated by shipping native camera/share/storage in
+  I1 + airplane-mode completeness; worst case add I5 items and resubmit via
+  Resolution Center (iterative, not account-threatening).
+- **12-tester/14-day rule** (Android, now off the critical path) — recruit during
+  I1–I3 so the clock runs concurrently; an organization Play account ($25, needs a
+  D-U-N-S number) bypasses it if ever needed.
 - **Two native shells to maintain** — Capacitor major bumps ~yearly; pin versions,
   upgrade deliberately, keep ALL app logic in the web layer so shells stay thin.
-- **WebView fragmentation on old Android** — API 21 floor is ancient; set
-  `minSdkVersion` to a modern floor (e.g. 26+) and test the WASM/OCR path on the
-  oldest supported device.
+- **WebView fragmentation on old Android** (I4) — set `minSdkVersion` 26+ and test
+  the WASM/OCR path on the oldest supported device.
